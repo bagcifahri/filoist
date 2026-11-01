@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Filoist</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+
+<link rel="stylesheet" href="fontlar/fontlar.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#14202b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Filoist">
+<link rel="apple-touch-icon" href="simgeler/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="simgeler/simge-192.png">
+<style>
+/* iPhone, 16 pikselden küçük yazılı kutulara dokununca sayfayı büyütür; bunu önlemek için */
+input, select { font-size: 16px !important; }
+</style>
+</head>
+<body>
+<script>
+if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+</script>
+<script>window.UYGULAMA = "iphone";</script>
+<style>
+/* Düzen: üstte filo özeti bandı, altında filtre paneli, ardından sıralanabilir araç tablosu (telefonda kart). */
+:root {
+  --bg: #eef1f4;
+  --surface: #ffffff;
+  --surface-2: #f6f8fa;
+  --ink: #14202b;
+  --muted: #5b6875;
+  --line: #d5dce3;
+  --accent: #0f4c81;
+  --accent-soft: #e1ecf6;
+  --oho: #0e7471;
+  --oho-soft: #dcf0ef;
+  --led: #ffb000;
+  --led-bg: #1c1b16;
+  --warn: #a4520a;
+  --warn-soft: #fbecd9;
+  --info: #4b5563;
+  --info-soft: #e7eaee;
+  --plate-blue: #1d4fa3;
+  --plate-bg: #ffffff;
+  --plate-ink: #111111;
+  --band: #14202b;
+  --band-ink: #eef1f4;
+  --band-muted: #9fb0c0;
+  --focus: #2f7fd1;
+  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --dot: "DotGothic16", "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1419; --surface: #161d24; --surface-2: #1b232b; --ink: #e6ebf0; --muted: #93a1ae; --line: #2a3540;
+    --accent: #6cb4f0; --accent-soft: #19324a; --oho: #45c4c0; --oho-soft: #133a39;
+    --warn: #f0a85a; --warn-soft: #3d2a14; --info: #b3bdc7; --info-soft: #252e37;
+    --plate-blue: #2a5fb8; --plate-bg: #e9edf1; --plate-ink: #111111;
+    --band: #0a0e12; --band-ink: #e6ebf0; --band-muted: #8796a4; --focus: #6cb4f0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1419; --surface: #161d24; --surface-2: #1b232b; --ink: #e6ebf0; --muted: #93a1ae; --line: #2a3540;
+  --accent: #6cb4f0; --accent-soft: #19324a; --oho: #45c4c0; --oho-soft: #133a39;
+  --warn: #f0a85a; --warn-soft: #3d2a14; --info: #b3bdc7; --info-soft: #252e37;
+  --plate-blue: #2a5fb8; --plate-bg: #e9edf1; --plate-ink: #111111;
+  --band: #0a0e12; --band-ink: #e6ebf0; --band-muted: #8796a4; --focus: #6cb4f0;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+/* display: flex tanımlı öğelerde de hidden özniteliği geçerli olsun (paneller, Ayarlar düğmesi) */
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.45; }
+main.wrap { padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px)); }
+.wrap { max-width: 1320px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* Üst bant */
+.band { background: var(--band); color: var(--band-ink); padding-top: env(safe-area-inset-top, 0px); }
+.band .wrap { padding-block: 22px 20px; display: flex; flex-wrap: wrap; gap: 18px 40px; align-items: flex-end; justify-content: space-between; }
+.brand h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 4.6vw, 44px); line-height: 1; margin: 0; letter-spacing: 0.01em; text-wrap: balance; }
+.brand p { margin: 8px 0 0; color: var(--band-muted); font-size: 13.5px; }
+.sign { display: inline-flex; align-items: center; gap: 10px; background: var(--led-bg); border-radius: 4px; padding: 6px 12px; margin-bottom: 10px; box-shadow: inset 0 0 0 1px #000; }
+.sign span { font-family: var(--dot); color: var(--led); font-size: 15px; letter-spacing: 0.08em; text-shadow: 0 0 6px rgba(255,176,0,.45); white-space: nowrap; }
+.totals { display: flex; flex-wrap: wrap; gap: 8px 28px; }
+.totals div { display: flex; flex-direction: column; }
+.totals b { font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1; }
+.totals small { color: var(--band-muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; }
+
+/* Filtreler */
+.panel { background: var(--surface); border-bottom: 1px solid var(--line); }
+.panel .wrap { padding-block: 16px; display: grid; gap: 14px; }
+.searchrow { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.search { flex: 1 1 340px; min-width: 0; position: relative; }
+.search input { width: 100%; height: 44px; border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; padding: 0 14px 0 40px; font-size: 15.5px; }
+.search input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+.search svg { position: absolute; left: 13px; top: 13px; width: 18px; height: 18px; color: var(--muted); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; height: 44px; }
+.seg button { border: 0; background: var(--surface); padding: 0 16px; cursor: pointer; font-weight: 600; font-size: 14px; color: var(--muted); }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+.toggle-filters { display: none; height: 44px; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 0 14px; font-weight: 600; cursor: pointer; }
+.filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px 12px; align-items: end; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field label { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); font-weight: 600; }
+.field select, .field input { height: 38px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); padding: 0 10px; min-width: 0; width: 100%; }
+.field.years > div { display: flex; gap: 6px; }
+.field select:disabled { opacity: .5; }
+.reset { height: 38px; border: 1px solid var(--line); background: transparent; border-radius: 6px; padding: 0 14px; cursor: pointer; color: var(--muted); font-weight: 600; }
+.reset:hover { color: var(--ink); border-color: var(--muted); }
+
+/* Sonuç özeti */
+.summary { display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: center; padding-block: 18px 12px; }
+.count { font-family: var(--display); font-weight: 700; font-size: 26px; line-height: 1; }
+.count small { font-family: var(--body); font-weight: 500; font-size: 14px; color: var(--muted); margin-left: 6px; }
+.minis { display: flex; flex-wrap: wrap; gap: 6px 20px; color: var(--muted); font-size: 13.5px; }
+.minis b { color: var(--ink); font-weight: 600; }
+.mix { flex: 1 1 320px; min-width: 0; display: grid; gap: 6px; }
+.mixbar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--info-soft); }
+.mixbar i { display: block; height: 100%; }
+.mixlegend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--muted); }
+.mixlegend span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.mixlegend i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+
+/* Tablo */
+.tablewrap { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+thead th { position: sticky; top: 0; background: var(--surface-2); text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); font-weight: 600; padding: 0; border-bottom: 1px solid var(--line); white-space: nowrap; z-index: 1; }
+thead th button { all: unset; display: flex; align-items: center; gap: 4px; padding: 11px 12px; cursor: pointer; width: 100%; box-sizing: border-box; }
+thead th button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+thead th button .arr { opacity: 0; font-size: 10px; }
+thead th[aria-sort] button { color: var(--ink); }
+thead th[aria-sort] button .arr { opacity: 1; }
+tbody tr { border-bottom: 1px solid var(--line); cursor: pointer; }
+tbody tr:last-child { border-bottom: 0; }
+tbody tr:hover { background: var(--surface-2); }
+td { padding: 9px 12px; vertical-align: middle; }
+td.c-model { min-width: 150px; }
+td.c-op { min-width: 160px; max-width: 240px; }
+td.c-hat { min-width: 180px; max-width: 320px; }
+.kapi { display: inline-block; font-family: var(--dot); background: var(--led-bg); color: var(--led); padding: 3px 8px 2px; border-radius: 3px; font-size: 14px; letter-spacing: 0.06em; white-space: nowrap; text-shadow: 0 0 5px rgba(255,176,0,.35); }
+.plate { display: inline-flex; align-items: stretch; border: 1.5px solid var(--plate-ink); border-radius: 3px; background: var(--plate-bg); color: var(--plate-ink); font-family: var(--mono); font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; line-height: 1; }
+.plate::before { content: "TR"; background: var(--plate-blue); color: #fff; font-size: 7.5px; font-family: var(--body); font-weight: 600; padding: 9px 3px 2px; letter-spacing: 0.02em; }
+.plate span { padding: 4px 7px 3px; }
+.plate.none { border-style: dashed; color: var(--muted); background: transparent; border-color: var(--line); font-weight: 500; }
+.plate.none::before { display: none; }
+.ex { display: block; font-size: 11.5px; color: var(--muted); margin-top: 3px; font-family: var(--mono); white-space: nowrap; }
+.chip { display: inline-block; font-size: 11.5px; font-weight: 600; padding: 2px 7px; border-radius: 4px; white-space: nowrap; letter-spacing: 0.02em; }
+.chip.iett { background: var(--accent-soft); color: var(--accent); }
+.chip.oho { background: var(--oho-soft); color: var(--oho); }
+.est { color: var(--muted); font-size: 12px; margin-left: 3px; cursor: help; }
+.unknown { color: var(--muted); font-style: italic; }
+.hats { display: flex; flex-wrap: wrap; gap: 3px; }
+.hat { all: unset; cursor: pointer; font-family: var(--mono); font-size: 12px; font-weight: 500; padding: 1px 5px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); }
+.hat:hover { border-color: var(--oho); color: var(--oho); }
+.hat:focus-visible { outline: 2px solid var(--focus); }
+.garaj { font-size: 13.5px; }
+.garaj::before { content: "Garaj "; color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; margin-right: 2px; }
+.state { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; white-space: nowrap; }
+.state::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #2f9e5b; }
+.state.warn { color: var(--warn); background: var(--warn-soft); padding: 2px 7px; border-radius: 4px; font-weight: 600; }
+.state.warn::before { background: var(--warn); }
+.state.info { color: var(--info); background: var(--info-soft); padding: 2px 7px; border-radius: 4px; font-weight: 600; }
+.state.info::before { background: var(--info); }
+.state.ok { color: var(--muted); }
+.empty { padding: 48px 16px; text-align: center; color: var(--muted); }
+.empty b { display: block; color: var(--ink); font-size: 16px; margin-bottom: 4px; }
+
+/* Sayfalama */
+.pager { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; padding-block: 14px 8px; color: var(--muted); font-size: 13.5px; }
+.pager .btns { display: flex; gap: 6px; align-items: center; }
+.pager button, .pager select { height: 34px; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 0 12px; cursor: pointer; }
+.pager button:disabled { opacity: .4; cursor: default; }
+
+/* Detay paneli */
+.scrim { position: fixed; inset: 0; background: rgba(8, 12, 16, .45); z-index: 20; }
+.detail { position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 100%); background: var(--surface); z-index: 21; border-left: 1px solid var(--line); display: flex; flex-direction: column; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); padding-right: env(safe-area-inset-right, 0px); }
+.detail header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--line); }
+.detail header .kapi { font-size: 22px; padding: 6px 12px 4px; }
+.close { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; width: 36px; height: 36px; cursor: pointer; font-size: 18px; line-height: 1; }
+.detail .body { overflow-y: auto; padding: 18px 20px 28px; display: grid; gap: 18px; }
+.detail h2 { font-family: var(--display); font-weight: 700; font-size: 26px; line-height: 1.1; margin: 0; text-wrap: balance; }
+.detail h2 small { display: block; font-family: var(--body); font-weight: 500; font-size: 14px; color: var(--muted); margin-top: 4px; }
+.kv { display: grid; grid-template-columns: 120px 1fr; gap: 9px 14px; margin: 0; font-size: 14px; }
+.kv dt { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; padding-top: 2px; }
+.kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.note { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 13.5px; color: var(--muted); }
+.note b { color: var(--ink); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.actions button { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 7px 12px; cursor: pointer; font-size: 13.5px; font-weight: 500; }
+.actions button:hover { border-color: var(--accent); color: var(--accent); }
+.detail a { color: var(--accent); }
+
+/* Ayarlar (yalnızca masaüstü uygulamasında) */
+.band-tools { display: flex; align-items: flex-end; gap: 18px 40px; flex-wrap: wrap; }
+.settings-btn { height: 38px; border: 1px solid #3a4856; background: transparent; color: var(--band-ink); border-radius: 6px; padding: 0 14px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+.settings-btn:hover { border-color: var(--band-muted); }
+.settings-btn svg { width: 17px; height: 17px; }
+.set-group { display: grid; gap: 12px; }
+.set-group h3 { font-family: var(--display); font-size: 19px; margin: 0; letter-spacing: 0.02em; }
+.set-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 14px; align-items: center; }
+.set-row label { font-weight: 500; }
+.set-row small { grid-column: 1 / -1; color: var(--muted); font-size: 12.5px; }
+.set-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); }
+.set-row select { height: 36px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); padding: 0 10px; }
+.set-row select:disabled { opacity: .5; }
+
+/* Telefon: tablo satırları kart olur */
+@media (max-width: 760px) {
+  .toggle-filters { display: inline-flex; align-items: center; }
+  .filters[data-collapsed="true"] { display: none; }
+  .filters { grid-template-columns: 1fr 1fr; }
+  .seg { flex: 1 1 auto; }
+  .seg button { flex: 1; padding: 0 8px; }
+  .tablewrap { background: transparent; border: 0; overflow: visible; }
+  table, tbody { display: block; }
+  thead { display: none; }
+  tbody tr { display: grid; grid-template-columns: auto 1fr auto; gap: 6px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 8px; }
+  tbody tr:last-child { border-bottom: 1px solid var(--line); }
+  td { padding: 0; display: block; min-width: 0 !important; max-width: none !important; }
+  td.c-kapi { grid-column: 1; }
+  td.c-filo { grid-column: 3; justify-self: end; }
+  td.c-plaka { grid-column: 2; grid-row: 1; }
+  td.c-model { grid-column: 1 / -1; font-weight: 600; }
+  td.c-marka { display: none; }
+  td.c-yil { display: none; }
+  td.c-op { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
+  td.c-hat { grid-column: 1 / -1; }
+  td.c-durum { grid-column: 1 / -1; }
+  td.c-durum:has(.ok) { display: none; }
+  .m-only { display: inline; }
+}
+@media (min-width: 761px) { .m-only { display: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .detail { animation: slide .18s ease-out; }
+  @keyframes slide { from { transform: translateX(24px); opacity: .6; } }
+}
+</style>
+
+<div class="band">
+  <div class="wrap">
+    <div class="brand">
+      <div class="sign" aria-hidden="true"><span>34 · FİLOİST</span></div>
+      <h1>Filoist</h1>
+      <p id="dataNote">İstanbul otobüs filosu · İETT ve özel halk otobüsleri · veriler 1 Kasım 2026</p>
+    </div>
+    <div class="band-tools">
+      <div class="totals num" id="totals"></div>
+      <button type="button" class="settings-btn" id="openSettings" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>Ayarlar</button>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="wrap">
+    <div class="searchrow">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <input id="q" type="search" placeholder="Kapı no, plaka, model, operatör veya hat ara: M4510, 34 HO 1000, Citaro, 500T" aria-label="Ara" autocomplete="off">
+      </div>
+      <div class="seg" role="group" aria-label="Filo">
+        <button type="button" data-filo="" aria-pressed="true">Tümü</button>
+        <button type="button" data-filo="İETT" aria-pressed="false">İETT</button>
+        <button type="button" data-filo="ÖHO" aria-pressed="false">ÖHO</button>
+      </div>
+      <button type="button" class="toggle-filters" id="toggleFilters" aria-expanded="false" aria-controls="filters">Filtreler</button>
+    </div>
+    <div class="filters" id="filters" data-collapsed="true">
+      <div class="field"><label for="fMarka">Marka</label><select id="fMarka"></select></div>
+      <div class="field"><label for="fModel">Model</label><select id="fModel"></select></div>
+      <div class="field years"><label for="fYilMin">Model yılı</label><div><select id="fYilMin" aria-label="En eski yıl"></select><select id="fYilMax" aria-label="En yeni yıl"></select></div></div>
+      <div class="field"><label for="fOperator">Operatör</label><select id="fOperator"></select></div>
+      <div class="field"><label for="fGaraj">Garaj (İETT)</label><select id="fGaraj"></select></div>
+      <div class="field"><label for="fHat">Hat (ÖHO)</label><input id="fHat" list="hatList" placeholder="ör. 15BK" autocomplete="off"><datalist id="hatList"></datalist></div>
+      <div class="field"><label for="fDurum">Durum</label><select id="fDurum"></select></div>
+      <div class="field"><button type="button" class="reset" id="reset">Filtreleri temizle</button></div>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+  <div class="summary">
+    <div class="count num" id="count"></div>
+    <div class="minis num" id="minis"></div>
+    <div class="mix" id="mix"></div>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr id="head"></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+  <div class="pager">
+    <div id="pageInfo" class="num"></div>
+    <div class="btns">
+      <label for="pageSize">Sayfa başına</label>
+      <select id="pageSize"><option>50</option><option selected>100</option><option>250</option><option>500</option><option value="0">Tümü</option></select>
+      <button type="button" id="prev">‹ Önceki</button>
+      <button type="button" id="next">Sonraki ›</button>
+    </div>
+  </div>
+</main>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="detail" id="detail" hidden aria-modal="true" role="dialog" aria-labelledby="dTitle"></aside>
+<aside class="detail" id="settings" hidden aria-modal="true" role="dialog" aria-labelledby="sTitle">
+  <header><h2 id="sTitle">Ayarlar</h2><button type="button" class="close" id="sClose" aria-label="Ayarları kapat">×</button></header>
+  <div class="body">
+    <div class="set-group">
+      <h3>Açılışta hatırlananlar</h3>
+      <div class="set-row"><label for="aFiltre">Filtreleri ve aramayı hatırla</label><input type="checkbox" id="aFiltre">
+        <small>Kapalıyken uygulama her açılışta tüm araçlarla, filtresiz başlar.</small></div>
+      <div class="set-row"><label for="aBoyut">Sayfa başına kayıt sayısını hatırla</label><input type="checkbox" id="aBoyut">
+        <small>Kapalıyken her açılışta aşağıdaki varsayılan kullanılır.</small></div>
+      <div class="set-row"><label for="aVarsayilan">Varsayılan sayfa başına kayıt</label>
+        <select id="aVarsayilan"><option>50</option><option>100</option><option>250</option><option>500</option><option value="0">Tümü</option></select></div>
+      <div class="set-row"><label for="aSirala">Sıralamayı hatırla</label><input type="checkbox" id="aSirala">
+        <small>Kapalıyken liste her açılışta kapı numarasına göre sıralanır.</small></div>
+    </div>
+    <div class="set-group">
+      <h3>Görünüm</h3>
+      <div class="set-row"><label for="aTema">Tema</label>
+        <select id="aTema"><option value="">Sistemle aynı</option><option value="light">Açık</option><option value="dark">Koyu</option></select></div>
+      <div class="set-row"><label for="aOlcek">Yazı ve arayüz boyutu</label>
+        <select id="aOlcek"><option value="90">%90</option><option value="100">%100</option><option value="115">%115</option><option value="130">%130</option><option value="150">%150</option></select></div>
+    </div>
+    <div class="set-group" id="grpKullanim">
+      <h3>Kullanım</h3>
+      <div class="set-row"><label for="aOdak">Açılışta arama kutusuna odaklan</label><input type="checkbox" id="aOdak">
+        <small>Uygulama açılır açılmaz kapı no veya plaka yazmaya başlayabilirsin.</small></div>
+    </div>
+    <div class="actions"><button type="button" id="aSifirla">Ayarları varsayılana döndür</button></div>
+  </div>
+</aside>
+
+<script src="filo.js"></script>
+<script>
+(function () {
+  const D = window.FILO;
+  const F = D.alanlar;
+  const tr = 'tr';
+  const fmt = new Intl.NumberFormat('tr-TR');
+  const MAP = { 'ç': 'c', 'ğ': 'g', 'ı': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u', 'â': 'a', 'î': 'i', 'û': 'u' };
+  const norm = s => (s || '').toLocaleLowerCase(tr).replace(/[çğıöşüâîû]/g, c => MAP[c]).replace(/-/g, '');
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  const all = D.satirlar.map(r => {
+    const a = {};
+    F.forEach((k, i) => { a[k] = r[i]; });
+    a.hatList = a.hatlar ? a.hatlar.split(' ') : [];
+    a.hatSet = new Set(a.hatList.map(norm));
+    const p = (a.plaka || '').replace(/\s/g, ''), e = (a.eskiPlaka || '').replace(/\s/g, '');
+    a._s = ' ' + [a.kapi, a.plaka, p, a.eskiPlaka, e, a.marka, a.model, a.marka + a.model, a.operator, a.hatlar, a.garaj, a.yil].map(norm).join(' ') + ' ';
+    a._n = Number(a.yil) || 0;
+    // Kapı no sıralaması harf + sayıya göre: A-001 ve A1001 aynı A dizisinde sayı sırasıyla yer alır
+    a._k = a.kapi.replace(/-/g, '');
+    return a;
+  });
+
+  // Marka renkleri (sonuç dağılım çubuğu)
+  const PALETTE = ['#2f6fb0', '#d4842a', '#3a9a7a', '#a35aa8', '#c9493f', '#7b8a2e', '#5b6875'];
+
+  // Ayarlar masaüstü (exe) ve iPhone sürümünde değiştirilebilir; düz web sayfası varsayılanlarla çalışır
+  const UYGULAMA = window.UYGULAMA || '';
+  const AYARLI = UYGULAMA === 'masaustu' || UYGULAMA === 'iphone';
+  const VARSAYILAN_AYAR = { filtre: true, boyut: true, varsayilan: 100, sirala: true, tema: '', olcek: 100, odak: true };
+  const BOYUTLAR = [50, 100, 250, 500, 0], OLCEKLER = [90, 100, 115, 130, 150], TEMALAR = ['', 'light', 'dark'];
+  const A = Object.assign({}, VARSAYILAN_AYAR);
+  if (AYARLI) try {
+    // Bozuk ya da eski kayıtlardan gelen geçersiz değerler varsayılana döner
+    const k = JSON.parse(localStorage.getItem('filo-ayarlar') || '{}');
+    ['filtre', 'boyut', 'sirala', 'odak'].forEach(x => { if (typeof k[x] === 'boolean') A[x] = k[x]; });
+    if (BOYUTLAR.includes(k.varsayilan)) A.varsayilan = k.varsayilan;
+    if (OLCEKLER.includes(k.olcek)) A.olcek = k.olcek;
+    if (TEMALAR.includes(k.tema)) A.tema = k.tema;
+  } catch (e) {}
+  const saveAyar = () => { try { localStorage.setItem('filo-ayarlar', JSON.stringify(A)); } catch (e) {} };
+
+  const FILTRE_ALANLARI = ['q', 'filo', 'marka', 'model', 'yilMin', 'yilMax', 'operator', 'garaj', 'hat', 'durum'];
+  const SIRALAMALAR = ['kapi', 'filo', 'plaka', 'marka', 'model', 'yil', 'operator', 'yer', 'durum'];
+  const S = { q: '', filo: '', marka: '', model: '', yilMin: '', yilMax: '', operator: '', garaj: '', hat: '', durum: '', sort: 'kapi', dir: 1, page: 0, size: A.varsayilan };
+  try {
+    const kayit = JSON.parse(localStorage.getItem('filo-durum') || '{}');
+    if (A.filtre) FILTRE_ALANLARI.forEach(k => { if (typeof kayit[k] === 'string') S[k] = kayit[k]; });
+    if (A.sirala && SIRALAMALAR.includes(kayit.sort)) { S.sort = kayit.sort; S.dir = kayit.dir === -1 ? -1 : 1; }
+    if (A.boyut && BOYUTLAR.includes(kayit.size)) S.size = kayit.size;
+  } catch (e) {}
+  const save = () => { try { localStorage.setItem('filo-durum', JSON.stringify(S)); } catch (e) {} };
+
+  const $ = id => document.getElementById(id);
+  const countBy = (list, key) => { const m = new Map(); list.forEach(a => { const v = a[key]; if (v) m.set(v, (m.get(v) || 0) + 1); }); return m; };
+  const sortedKeys = m => [...m.keys()].sort((x, y) => x.localeCompare(y, tr));
+
+  function fillSelect(el, label, m, cur) {
+    el.innerHTML = `<option value="">${esc(label)}</option>` + sortedKeys(m).map(k => `<option value="${esc(k)}">${esc(k)} (${fmt.format(m.get(k))})</option>`).join('');
+    el.value = m.has(cur) ? cur : '';
+  }
+
+  // Sabit seçenekler
+  const totals = { total: all.length, iett: all.filter(a => a.filo === 'İETT').length, oho: all.filter(a => a.filo === 'ÖHO').length };
+  $('totals').innerHTML = [
+    [totals.total, 'araç'], [totals.iett, 'İETT'], [totals.oho, 'ÖHO'],
+    [countBy(all, 'marka').size, 'marka'], [countBy(all.filter(a => a.filo === 'ÖHO'), 'operator').size, 'ÖHO operatörü'],
+  ].map(([n, l]) => `<div><b>${fmt.format(n)}</b><small>${l}</small></div>`).join('');
+
+  const years = [...new Set(all.map(a => a._n).filter(Boolean))].sort((a, b) => a - b);
+  $('fYilMin').innerHTML = '<option value="">En eski</option>' + years.map(y => `<option>${y}</option>`).join('');
+  $('fYilMax').innerHTML = '<option value="">En yeni</option>' + years.map(y => `<option>${y}</option>`).join('');
+  fillSelect($('fGaraj'), 'Tüm garajlar', countBy(all, 'garaj'), '');
+  fillSelect($('fDurum'), 'Tüm durumlar', countBy(all, 'durum'), '');
+  const hatCounts = new Map();
+  all.forEach(a => a.hatList.forEach(h => hatCounts.set(h, (hatCounts.get(h) || 0) + 1)));
+  $('hatList').innerHTML = [...hatCounts.keys()].sort((x, y) => x.localeCompare(y, tr, { numeric: true })).map(h => `<option value="${esc(h)}">`).join('');
+
+  // Seçenek listeleri filo seçimine göre daralır; model listesi markaya göre
+  const GARAJLAR = countBy(all, 'garaj'), DURUMLAR = countBy(all, 'durum');
+  function refreshOptions() {
+    // Seçili filoya uymayan ya da artık var olmayan değerler görünmeden filtrelemesin
+    if (!['', 'İETT', 'ÖHO'].includes(S.filo)) S.filo = '';
+    if (S.filo === 'ÖHO' || !GARAJLAR.has(S.garaj)) S.garaj = '';
+    if (S.filo === 'İETT') S.hat = '';
+    if (!DURUMLAR.has(S.durum)) S.durum = '';
+    if (!years.includes(Number(S.yilMin))) S.yilMin = '';
+    if (!years.includes(Number(S.yilMax))) S.yilMax = '';
+    const base = S.filo ? all.filter(a => a.filo === S.filo) : all;
+    fillSelect($('fMarka'), 'Tüm markalar', countBy(base, 'marka'), S.marka);
+    S.marka = $('fMarka').value;
+    fillSelect($('fModel'), S.marka ? 'Tüm ' + S.marka + ' modelleri' : 'Tüm modeller', countBy(S.marka ? base.filter(a => a.marka === S.marka) : base, 'model'), S.model);
+    S.model = $('fModel').value;
+    fillSelect($('fOperator'), 'Tüm operatörler', countBy(base, 'operator'), S.operator);
+    S.operator = $('fOperator').value;
+    $('fGaraj').disabled = S.filo === 'ÖHO';
+    $('fHat').disabled = S.filo === 'İETT';
+  }
+
+  function filtered() {
+    const terms = norm(S.q).split(/\s+/).filter(Boolean);
+    const qJoined = norm(S.q).replace(/\s+/g, '');
+    // Plaka gibi görünen aramada (34 HO 1000) tam plaka eşleşmesi aranır
+    const plateQ = /^\d{2}[a-z]{1,3}\d{2,5}$/.test(qJoined) ? ' ' + qJoined + ' ' : '';
+    const hat = norm(S.hat.trim());
+    const ymin = Number(S.yilMin) || 0, ymax = Number(S.yilMax) || 9999;
+    return all.filter(a => {
+      if (S.filo && a.filo !== S.filo) return false;
+      if (S.marka && a.marka !== S.marka) return false;
+      if (S.model && a.model !== S.model) return false;
+      if (S.operator && a.operator !== S.operator) return false;
+      if (S.garaj && a.garaj !== S.garaj) return false;
+      if (S.durum && a.durum !== S.durum) return false;
+      if ((S.yilMin || S.yilMax) && (!a._n || a._n < ymin || a._n > ymax)) return false;
+      if (hat && !a.hatSet.has(hat)) return false;
+      if (plateQ) return a._s.includes(plateQ);
+      if (terms.length && !terms.every(t => a._s.includes(t)) && !(qJoined.length > 3 && a._s.includes(qJoined))) return false;
+      return true;
+    });
+  }
+
+  const COLS = [
+    ['kapi', 'Kapı no', 'c-kapi'], ['filo', 'Filo', 'c-filo'], ['plaka', 'Plaka', 'c-plaka'], ['marka', 'Marka', 'c-marka'],
+    ['model', 'Model', 'c-model'], ['yil', 'Yıl', 'c-yil'], ['operator', 'Operatör', 'c-op'], ['yer', 'Hat / Garaj', 'c-hat'], ['durum', 'Durum', 'c-durum'],
+  ];
+  function sortVal(a, k) { return k === 'yer' ? (a.hatlar || a.garaj || '') : k === 'yil' ? a._n : k === 'kapi' ? a._k : (a[k] || ''); }
+  function sorter(k, dir) {
+    return (x, y) => {
+      const a = sortVal(x, k), b = sortVal(y, k);
+      let r = typeof a === 'number' ? a - b : String(a).localeCompare(String(b), tr, { numeric: true });
+      if (!r) r = x._k.localeCompare(y._k, tr, { numeric: true }) || x.kapi.localeCompare(y.kapi, tr);
+      return r * dir;
+    };
+  }
+
+  function renderHead() {
+    $('head').innerHTML = COLS.map(([k, l, c]) => {
+      const on = S.sort === k;
+      return `<th class="${c}"${on ? ` aria-sort="${S.dir > 0 ? 'ascending' : 'descending'}"` : ''}><button type="button" data-sort="${k}">${l}<span class="arr">${on && S.dir < 0 ? '▼' : '▲'}</span></button></th>`;
+    }).join('');
+  }
+
+  const plate = (p) => p ? `<span class="plate"><span>${esc(p)}</span></span>` : '<span class="plate none"><span>plaka yok</span></span>';
+  const stateCls = d => d === 'Şüpheli' ? 'warn' : d === 'Canlı listede yok' ? 'info' : 'ok';
+  const modelHtml = a => a.model
+    ? esc(a.model) + (a.kaynak === 'seri aralığı' ? '<span class="est" title="Model, kapı no serisinden tahmin edildi">≈</span>' : '')
+    : '<span class="unknown">Bilinmiyor</span>';
+
+  function row(a, i) {
+    const yer = a.filo === 'ÖHO'
+      ? `<div class="hats">${a.hatList.map(h => `<button type="button" class="hat" data-hat="${esc(h)}" title="${esc(h)} hattındaki araçlar">${esc(h)}</button>`).join('')}</div>`
+      : (a.garaj ? `<span class="garaj">${esc(a.garaj)}</span>` : '<span class="unknown">—</span>');
+    return `<tr data-i="${i}" tabindex="0">
+      <td class="c-kapi"><span class="kapi">${esc(a.kapi)}</span></td>
+      <td class="c-filo"><span class="chip ${a.filo === 'İETT' ? 'iett' : 'oho'}">${esc(a.filo)}</span></td>
+      <td class="c-plaka">${plate(a.plaka)}${a.eskiPlaka ? `<span class="ex">ex. ${esc(a.eskiPlaka)}</span>` : ''}</td>
+      <td class="c-marka">${a.marka ? esc(a.marka) : '<span class="unknown">Bilinmiyor</span>'}</td>
+      <td class="c-model"><span class="m-only">${esc(a.marka)} </span>${modelHtml(a)}<span class="m-only">${a.yil ? ' · ' + esc(a.yil) : ''}</span></td>
+      <td class="c-yil num">${a.yil ? esc(a.yil) : '<span class="unknown">—</span>'}</td>
+      <td class="c-op">${esc(a.operator)}</td>
+      <td class="c-hat">${yer}</td>
+      <td class="c-durum"><span class="state ${stateCls(a.durum)}">${esc(a.durum)}</span></td>
+    </tr>`;
+  }
+
+  let current = [];
+  function render() {
+    refreshOptions();
+    current = filtered().sort(sorter(S.sort, S.dir));
+    const n = current.length;
+    const size = Number(S.size) || n || 1;
+    const pages = Math.max(1, Math.ceil(n / size));
+    if (S.page >= pages) S.page = pages - 1;
+    const start = S.page * size, slice = current.slice(start, start + size);
+
+    $('count').innerHTML = `${fmt.format(n)}<small>araç${n !== all.length ? ' bulundu' : ''}</small>`;
+    const iett = current.filter(a => a.filo === 'İETT').length;
+    const yrs = current.map(a => a._n).filter(Boolean);
+    const avg = yrs.length ? yrs.reduce((s, y) => s + y, 0) / yrs.length : 0;
+    $('minis').innerHTML = n ? [
+      `<span><b>${fmt.format(iett)}</b> İETT</span>`, `<span><b>${fmt.format(n - iett)}</b> ÖHO</span>`,
+      yrs.length ? `<span>ortalama model yılı <b>${Math.round(avg)}</b> (≈${(2026 - avg).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} yaş)</span>` : '',
+    ].join('') : '';
+
+    const mk = [...countBy(current, 'marka')].sort((x, y) => y[1] - x[1]);
+    const top = mk.slice(0, 6), other = mk.slice(6).reduce((s, x) => s + x[1], 0);
+    if (other) top.push(['Diğer', other]);
+    $('mix').innerHTML = n ? `<div class="mixbar" role="img" aria-label="Marka dağılımı">${top.map(([k, v], i) => `<i style="width:${(v / n) * 100}%;background:${PALETTE[i]}" title="${esc(k)}: ${fmt.format(v)}"></i>`).join('')}</div>
+      <div class="mixlegend">${top.map(([k, v], i) => `<span><i style="background:${PALETTE[i]}"></i>${esc(k)} <b class="num">${fmt.format(v)}</b></span>`).join('')}</div>` : '';
+
+    renderHead();
+    $('rows').innerHTML = slice.length ? slice.map((a, j) => row(a, start + j)).join('')
+      : `<tr class="emptyrow"><td colspan="${COLS.length}"><div class="empty"><b>Bu aramayla eşleşen araç yok</b>Arama metnini kısaltmayı ya da filtreleri temizlemeyi deneyin.</div></td></tr>`;
+    $('pageInfo').textContent = n ? `${fmt.format(start + 1)}–${fmt.format(Math.min(start + size, n))} / ${fmt.format(n)} araç · sayfa ${S.page + 1} / ${pages}` : '';
+    $('prev').disabled = S.page === 0;
+    $('next').disabled = S.page >= pages - 1;
+    syncInputs();
+    save();
+  }
+
+  function syncInputs() {
+    if (document.activeElement !== $('q')) $('q').value = S.q;
+    if (document.activeElement !== $('fHat')) $('fHat').value = S.hat;
+    $('fYilMin').value = S.yilMin; $('fYilMax').value = S.yilMax;
+    $('fGaraj').value = S.garaj; $('fDurum').value = S.durum;
+    $('pageSize').value = String(S.size);
+    document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.filo === S.filo)));
+  }
+
+  const set = (patch) => { Object.assign(S, patch, { page: 'page' in patch ? patch.page : 0 }); render(); };
+
+  // Olaylar
+  // Arama ve hat kutusunun gecikmeli güncellemesi ayrı zamanlayıcılarla: biri diğerini iptal etmesin
+  let tq, th;
+  $('q').addEventListener('input', e => { const v = e.target.value; clearTimeout(tq); tq = setTimeout(() => set({ q: v }), 120); });
+  $('fHat').addEventListener('input', e => { const v = e.target.value; clearTimeout(th); th = setTimeout(() => set({ hat: v }), 150); });
+  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => set({ filo: b.dataset.filo })));
+  $('fMarka').addEventListener('change', e => set({ marka: e.target.value, model: '' }));
+  $('fModel').addEventListener('change', e => set({ model: e.target.value }));
+  $('fOperator').addEventListener('change', e => set({ operator: e.target.value }));
+  $('fGaraj').addEventListener('change', e => set({ garaj: e.target.value }));
+  $('fDurum').addEventListener('change', e => set({ durum: e.target.value }));
+  $('fYilMin').addEventListener('change', e => set({ yilMin: e.target.value }));
+  $('fYilMax').addEventListener('change', e => set({ yilMax: e.target.value }));
+  $('pageSize').addEventListener('change', e => set({ size: Number(e.target.value) }));
+  $('reset').addEventListener('click', () => set({ q: '', filo: '', marka: '', model: '', yilMin: '', yilMax: '', operator: '', garaj: '', hat: '', durum: '' }));
+  $('prev').addEventListener('click', () => { set({ page: S.page - 1 }); scrollToTable(); });
+  $('next').addEventListener('click', () => { set({ page: S.page + 1 }); scrollToTable(); });
+  $('toggleFilters').addEventListener('click', e => {
+    const f = $('filters'), open = f.dataset.collapsed === 'true';
+    f.dataset.collapsed = String(!open); e.currentTarget.setAttribute('aria-expanded', String(open));
+  });
+  $('head').addEventListener('click', e => {
+    const b = e.target.closest('[data-sort]'); if (!b) return;
+    const k = b.dataset.sort;
+    set(S.sort === k ? { dir: -S.dir } : { sort: k, dir: k === 'yil' ? -1 : 1 });
+  });
+  $('rows').addEventListener('click', e => {
+    const h = e.target.closest('[data-hat]');
+    if (h) { e.stopPropagation(); set({ hat: h.dataset.hat, filo: S.filo === 'İETT' ? '' : S.filo }); return; }
+    const tr = e.target.closest('tr[data-i]'); if (tr) openDetail(current[Number(tr.dataset.i)]);
+  });
+  $('rows').addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || e.target.tagName !== 'TR') return;
+    openDetail(current[Number(e.target.dataset.i)]);
+  });
+  function scrollToTable() { document.querySelector('.summary').scrollIntoView({ block: 'start' }); }
+
+  // Detay paneli
+  let lastFocus = null;
+  function openDetail(a) {
+    if (!a) return;
+    lastFocus = document.activeElement;
+    const kv = [
+      ['Filo', `<span class="chip ${a.filo === 'İETT' ? 'iett' : 'oho'}">${esc(a.filo)}</span>`],
+      ['Plaka', plate(a.plaka)],
+      a.eskiPlaka ? ['Eski plaka', `<span class="plate"><span>${esc(a.eskiPlaka)}</span></span>`] : null,
+      ['Marka', a.marka ? esc(a.marka) : '<span class="unknown">Bilinmiyor</span>'],
+      ['Model', modelHtml(a)],
+      ['Model yılı', a.yil ? esc(a.yil) : '<span class="unknown">Bilinmiyor</span>'],
+      ['Operatör', esc(a.operator)],
+      a.filo === 'İETT' ? ['Garaj', a.garaj ? esc(a.garaj) : '<span class="unknown">—</span>'] : null,
+      a.filo === 'ÖHO' ? ['Hatlar', a.hatList.map(h => `<a href="https://iett.istanbul/RouteDetail?hkod=${encodeURIComponent(h)}" target="_blank" rel="noopener">${esc(h)}</a>`).join(', ')] : null,
+      ['Durum', `<span class="state ${stateCls(a.durum)}">${esc(a.durum)}</span>`],
+    ].filter(Boolean);
+    const note = a.not ? `<div class="note"><b>Not:</b> ${esc(a.not)}</div>` : '';
+    const stateNote = a.durum === 'Canlı listede yok' ? '<div class="note">Bu araç filo kayıtlarında görünüyor ama 1 Kasım 2026 tarihli İETT canlı filo listesinde yok. Yeni teslim edilmiş ya da geçici olarak hizmet dışı olabilir.</div>' : '';
+    const acts = [
+      a.marka ? `<button type="button" data-f='${esc(JSON.stringify({ marka: a.marka, model: '' }))}'>Tüm ${esc(a.marka)} araçları</button>` : '',
+      a.model ? `<button type="button" data-f='${esc(JSON.stringify({ marka: a.marka, model: a.model }))}'>Aynı modeldeki araçlar</button>` : '',
+      a.filo === 'İETT' && a.garaj ? `<button type="button" data-f='${esc(JSON.stringify({ garaj: a.garaj, filo: 'İETT' }))}'>${esc(a.garaj)} garajındaki araçlar</button>` : '',
+      a.filo === 'ÖHO' ? `<button type="button" data-f='${esc(JSON.stringify({ operator: a.operator, filo: 'ÖHO' }))}'>Bu operatörün araçları</button>` : '',
+    ].join('');
+    $('detail').innerHTML = `<header><span class="kapi">${esc(a.kapi)}</span><button type="button" class="close" id="dClose" aria-label="Kapat">×</button></header>
+      <div class="body">
+        <h2 id="dTitle">${esc([a.marka, a.model].filter(Boolean).join(' ') || 'Model bilinmiyor')}<small>${a.yil ? esc(a.yil) + ' model · ' : ''}${esc(a.operator)}</small></h2>
+        <dl class="kv">${kv.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
+        ${stateNote}${note}
+        <div class="actions">${acts}</div>
+      </div>`;
+    $('detail').hidden = false; $('scrim').hidden = false;
+    $('dClose').focus();
+  }
+  function closeDetail() {
+    $('detail').hidden = true; $('scrim').hidden = true;
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  $('scrim').addEventListener('click', () => { if (!$('detail').hidden) closeDetail(); });
+  $('detail').addEventListener('click', e => {
+    if (e.target.id === 'dClose') return closeDetail();
+    const b = e.target.closest('[data-f]');
+    if (b) {
+      closeDetail();
+      set(Object.assign({ q: '', marka: '', model: '', operator: '', garaj: '', hat: '', durum: '', yilMin: '', yilMax: '' }, JSON.parse(b.dataset.f)));
+      scrollToTable();
+    }
+  });
+  document.addEventListener('keydown', e => {
+    const acik = !$('detail').hidden ? $('detail') : !$('settings').hidden ? $('settings') : null;
+    if (!acik) return;
+    if (e.key === 'Escape') return acik.id === 'detail' ? closeDetail() : closeSettings();
+    // Panel açıkken Tab ile odak arkadaki sayfaya kaçmasın
+    if (e.key !== 'Tab') return;
+    const odaklar = [...acik.querySelectorAll('button, a[href], select, input')];
+    const ilk = odaklar[0], son = odaklar[odaklar.length - 1];
+    if (!acik.contains(document.activeElement)) { e.preventDefault(); ilk.focus(); }
+    else if (e.shiftKey && document.activeElement === ilk) { e.preventDefault(); son.focus(); }
+    else if (!e.shiftKey && document.activeElement === son) { e.preventDefault(); ilk.focus(); }
+  });
+
+  // Ayarlar paneli
+  function applyAyar() {
+    if (A.tema) document.documentElement.dataset.theme = A.tema; else delete document.documentElement.dataset.theme;
+    document.documentElement.style.zoom = A.olcek === 100 ? '' : String(A.olcek / 100);
+  }
+  function syncAyar() {
+    $('aFiltre').checked = A.filtre; $('aBoyut').checked = A.boyut; $('aSirala').checked = A.sirala; $('aOdak').checked = A.odak;
+    $('aVarsayilan').value = String(A.varsayilan); $('aTema').value = A.tema; $('aOlcek').value = String(A.olcek);
+  }
+  const setAyar = (patch) => { Object.assign(A, patch); saveAyar(); applyAyar(); syncAyar(); };
+  function openSettings() {
+    lastFocus = document.activeElement;
+    syncAyar();
+    $('settings').hidden = false; $('scrim').hidden = false;
+    $('sClose').focus();
+  }
+  function closeSettings() {
+    $('settings').hidden = true; $('scrim').hidden = true;
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  if (AYARLI) {
+    $('openSettings').hidden = false;
+    // iPhone'da klavye ancak dokunuşla açıldığından açılışta odaklanma ayarı yalnızca masaüstünde
+    $('grpKullanim').hidden = UYGULAMA !== 'masaustu';
+    $('openSettings').addEventListener('click', openSettings);
+    $('sClose').addEventListener('click', closeSettings);
+    $('scrim').addEventListener('click', () => { if (!$('settings').hidden) closeSettings(); });
+    $('aFiltre').addEventListener('change', e => setAyar({ filtre: e.target.checked }));
+    $('aBoyut').addEventListener('change', e => setAyar({ boyut: e.target.checked }));
+    $('aSirala').addEventListener('change', e => setAyar({ sirala: e.target.checked }));
+    $('aOdak').addEventListener('change', e => setAyar({ odak: e.target.checked }));
+    $('aTema').addEventListener('change', e => setAyar({ tema: e.target.value }));
+    $('aOlcek').addEventListener('change', e => setAyar({ olcek: Number(e.target.value) }));
+    // Varsayılan değişince, sayfa başına kayıt hatırlanmıyorsa mevcut liste de hemen ona geçer
+    $('aVarsayilan').addEventListener('change', e => { setAyar({ varsayilan: Number(e.target.value) }); if (!A.boyut) set({ size: A.varsayilan }); });
+    $('aSifirla').addEventListener('click', () => { setAyar(Object.assign({}, VARSAYILAN_AYAR)); $('aSifirla').focus(); });
+    applyAyar();
+  }
+
+  render();
+  if (UYGULAMA === 'masaustu' && A.odak) $('q').focus();
+})();
+</script>
+</body>
+</html>
