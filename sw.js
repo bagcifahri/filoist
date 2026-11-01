@@ -1,4 +1,4 @@
-const SURUM = 'filoist-e6ca96319371';
+const SURUM = 'filoist-d0ad93a995f1';
 const DOSYALAR = [
   "./",
   "filo.js",

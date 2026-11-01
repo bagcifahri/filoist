@@ -203,7 +203,7 @@ td.c-hat { min-width: 180px; max-width: 320px; }
 .actions button:hover { border-color: var(--accent); color: var(--accent); }
 .detail a { color: var(--accent); }
 
-/* Ayarlar (yalnızca masaüstü uygulamasında) */
+/* Ayarlar (exe, iPhone ve Android sürümlerinde) */
 .band-tools { display: flex; align-items: flex-end; gap: 18px 40px; flex-wrap: wrap; }
 .settings-btn { height: 38px; border: 1px solid #3a4856; background: transparent; color: var(--band-ink); border-radius: 6px; padding: 0 14px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
 .settings-btn:hover { border-color: var(--band-muted); }
@@ -376,6 +376,10 @@ td.c-hat { min-width: 180px; max-width: 320px; }
     return a;
   });
 
+  document.getElementById('dataNote').textContent = `İstanbul otobüs filosu · İETT ve özel halk otobüsleri · veriler ${D.tarih}`;
+  // Ortalama yaş, verinin alındığı yıla göre
+  const VERI_YILI = Number((D.tarih.match(/\d{4}/) || [new Date().getFullYear()])[0]);
+
   // Marka renkleri (sonuç dağılım çubuğu)
   const PALETTE = ['#2f6fb0', '#d4842a', '#3a9a7a', '#a35aa8', '#c9493f', '#7b8a2e', '#5b6875'];
 
@@ -534,7 +538,7 @@ td.c-hat { min-width: 180px; max-width: 320px; }
     const avg = yrs.length ? yrs.reduce((s, y) => s + y, 0) / yrs.length : 0;
     $('minis').innerHTML = n ? [
       `<span><b>${fmt.format(iett)}</b> İETT</span>`, `<span><b>${fmt.format(n - iett)}</b> ÖHO</span>`,
-      yrs.length ? `<span>ortalama model yılı <b>${Math.round(avg)}</b> (≈${(2026 - avg).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} yaş)</span>` : '',
+      yrs.length ? `<span>ortalama model yılı <b>${Math.round(avg)}</b> (≈${(VERI_YILI - avg).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} yaş)</span>` : '',
     ].join('') : '';
 
     const mk = [...countBy(current, 'marka')].sort((x, y) => y[1] - x[1]);
@@ -581,12 +585,14 @@ td.c-hat { min-width: 180px; max-width: 320px; }
   $('fOperator').addEventListener('change', e => set({ operator: e.target.value }));
   $('fGaraj').addEventListener('change', e => set({ garaj: e.target.value }));
   $('fDurum').addEventListener('change', e => set({ durum: e.target.value }));
-  $('fYilMin').addEventListener('change', e => set({ yilMin: e.target.value }));
-  $('fYilMax').addEventListener('change', e => set({ yilMax: e.target.value }));
+  // Yıl aralığı ters seçilirse (en eski > en yeni) liste boş kalmasın, diğer uç da aynı yıla çekilsin
+  $('fYilMin').addEventListener('change', e => { const v = e.target.value; set(S.yilMax && v && +v > +S.yilMax ? { yilMin: v, yilMax: v } : { yilMin: v }); });
+  $('fYilMax').addEventListener('change', e => { const v = e.target.value; set(S.yilMin && v && +v < +S.yilMin ? { yilMin: v, yilMax: v } : { yilMax: v }); });
   $('pageSize').addEventListener('change', e => set({ size: Number(e.target.value) }));
   $('reset').addEventListener('click', () => set({ q: '', filo: '', marka: '', model: '', yilMin: '', yilMax: '', operator: '', garaj: '', hat: '', durum: '' }));
-  $('prev').addEventListener('click', () => { set({ page: S.page - 1 }); scrollToTable(); });
-  $('next').addEventListener('click', () => { set({ page: S.page + 1 }); scrollToTable(); });
+  // İlk ya da son sayfaya gelinince basılan düğme devre dışı kalır ve odağı kaybeder; odak diğer düğmeye geçer
+  $('prev').addEventListener('click', () => { set({ page: S.page - 1 }); scrollToTable(); if ($('prev').disabled) $('next').focus(); });
+  $('next').addEventListener('click', () => { set({ page: S.page + 1 }); scrollToTable(); if ($('next').disabled) $('prev').focus(); });
   // Sayfaya git: geçersiz ya da aralık dışı sayı en yakın geçerli sayfaya çekilir
   $('goForm').addEventListener('submit', e => {
     e.preventDefault();
@@ -597,8 +603,7 @@ td.c-hat { min-width: 180px; max-width: 320px; }
     $('goPage').value = sayfa;
     scrollToTable();
     // Odak gidilen sayfanın ilk aracına geçer: ekran okuyucu oradan devam eder, telefonda klavye kapanır
-    const ilk = $('rows').querySelector('tr[data-i]');
-    if (ilk) ilk.focus({ preventScroll: true });
+    ilkSonucaOdaklan();
   });
   $('toggleFilters').addEventListener('click', e => {
     const f = $('filters'), open = f.dataset.collapsed === 'true';
@@ -608,10 +613,13 @@ td.c-hat { min-width: 180px; max-width: 320px; }
     const b = e.target.closest('[data-sort]'); if (!b) return;
     const k = b.dataset.sort;
     set(S.sort === k ? { dir: -S.dir } : { sort: k, dir: k === 'yil' ? -1 : 1 });
+    // Başlıklar yeniden çizildi: odak kaybolup sayfa başına atlamasın, aynı başlıkta kalsın
+    const yeni = $('head').querySelector(`[data-sort="${k}"]`);
+    if (yeni) yeni.focus();
   });
   $('rows').addEventListener('click', e => {
     const h = e.target.closest('[data-hat]');
-    if (h) { e.stopPropagation(); set({ hat: h.dataset.hat, filo: S.filo === 'İETT' ? '' : S.filo }); return; }
+    if (h) { e.stopPropagation(); set({ hat: h.dataset.hat, filo: S.filo === 'İETT' ? '' : S.filo }); ilkSonucaOdaklan(); return; }
     const tr = e.target.closest('tr[data-i]'); if (tr) openDetail(current[Number(tr.dataset.i)]);
   });
   $('rows').addEventListener('keydown', e => {
@@ -619,6 +627,11 @@ td.c-hat { min-width: 180px; max-width: 320px; }
     openDetail(current[Number(e.target.dataset.i)]);
   });
   function scrollToTable() { document.querySelector('.summary').scrollIntoView({ block: 'start' }); }
+  // Liste yeniden çizilince odaklı öğe silinir; ekran okuyucu yerini kaybetmesin diye odak ilk sonuca geçer
+  function ilkSonucaOdaklan() {
+    const ilk = $('rows').querySelector('tr[data-i]') || $('q');
+    ilk.focus({ preventScroll: true });
+  }
 
   // Detay paneli
   let lastFocus = null;
@@ -638,7 +651,7 @@ td.c-hat { min-width: 180px; max-width: 320px; }
       ['Durum', `<span class="state ${stateCls(a.durum)}">${esc(a.durum)}</span>`],
     ].filter(Boolean);
     const note = a.not ? `<div class="note"><b>Not:</b> ${esc(a.not)}</div>` : '';
-    const stateNote = a.durum === 'Canlı listede yok' ? '<div class="note">Bu araç filo kayıtlarında görünüyor ama 1 Kasım 2026 tarihli İETT canlı filo listesinde yok. Yeni teslim edilmiş ya da geçici olarak hizmet dışı olabilir.</div>' : '';
+    const stateNote = a.durum === 'Canlı listede yok' ? `<div class="note">Bu araç filo kayıtlarında görünüyor ama ${esc(D.tarih)} tarihli İETT canlı filo listesinde yok. Yeni teslim edilmiş ya da geçici olarak hizmet dışı olabilir.</div>` : '';
     const acts = [
       a.marka ? `<button type="button" data-f='${esc(JSON.stringify({ marka: a.marka, model: '' }))}'>Tüm ${esc(a.marka)} araçları</button>` : '',
       a.model ? `<button type="button" data-f='${esc(JSON.stringify({ marka: a.marka, model: a.model }))}'>Aynı modeldeki araçlar</button>` : '',
@@ -655,18 +668,19 @@ td.c-hat { min-width: 180px; max-width: 320px; }
     $('detail').hidden = false; $('scrim').hidden = false;
     $('dClose').focus();
   }
-  function closeDetail() {
+  function closeDetail(odakGeriDonsun = true) {
     $('detail').hidden = true; $('scrim').hidden = true;
-    if (lastFocus && lastFocus.focus) lastFocus.focus();
+    if (odakGeriDonsun && lastFocus && lastFocus.isConnected) lastFocus.focus();
   }
   $('scrim').addEventListener('click', () => { if (!$('detail').hidden) closeDetail(); });
   $('detail').addEventListener('click', e => {
     if (e.target.id === 'dClose') return closeDetail();
     const b = e.target.closest('[data-f]');
     if (b) {
-      closeDetail();
+      closeDetail(false);
       set(Object.assign({ q: '', marka: '', model: '', operator: '', garaj: '', hat: '', durum: '', yilMin: '', yilMax: '' }, JSON.parse(b.dataset.f)));
       scrollToTable();
+      ilkSonucaOdaklan();
     }
   });
   document.addEventListener('keydown', e => {
@@ -675,7 +689,7 @@ td.c-hat { min-width: 180px; max-width: 320px; }
     if (e.key === 'Escape') return acik.id === 'detail' ? closeDetail() : closeSettings();
     // Panel açıkken Tab ile odak arkadaki sayfaya kaçmasın
     if (e.key !== 'Tab') return;
-    const odaklar = [...acik.querySelectorAll('button, a[href], select, input')];
+    const odaklar = [...acik.querySelectorAll('button, a[href], select, input')].filter(o => !o.disabled && o.getClientRects().length);
     const ilk = odaklar[0], son = odaklar[odaklar.length - 1];
     if (!acik.contains(document.activeElement)) { e.preventDefault(); ilk.focus(); }
     else if (e.shiftKey && document.activeElement === ilk) { e.preventDefault(); son.focus(); }
