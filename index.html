@@ -150,7 +150,7 @@ td.c-op { min-width: 160px; max-width: 240px; }
 td.c-hat { min-width: 180px; max-width: 320px; }
 .kapi { display: inline-block; font-family: var(--dot); background: var(--led-bg); color: var(--led); padding: 3px 8px 2px; border-radius: 3px; font-size: 14px; letter-spacing: 0.06em; white-space: nowrap; text-shadow: 0 0 5px rgba(255,176,0,.35); }
 .plate { display: inline-flex; align-items: stretch; border: 1.5px solid var(--plate-ink); border-radius: 3px; background: var(--plate-bg); color: var(--plate-ink); font-family: var(--mono); font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; line-height: 1; }
-.plate::before { content: "TR"; background: var(--plate-blue); color: #fff; font-size: 7.5px; font-family: var(--body); font-weight: 600; padding: 9px 3px 2px; letter-spacing: 0.02em; }
+.plate::before { content: "TR"; content: "TR" / ""; background: var(--plate-blue); color: #fff; font-size: 7.5px; font-family: var(--body); font-weight: 600; padding: 9px 3px 2px; letter-spacing: 0.02em; }
 .plate span { padding: 4px 7px 3px; }
 .plate.none { border-style: dashed; color: var(--muted); background: transparent; border-color: var(--line); font-weight: 500; }
 .plate.none::before { display: none; }
@@ -158,6 +158,7 @@ td.c-hat { min-width: 180px; max-width: 320px; }
 .chip { display: inline-block; font-size: 11.5px; font-weight: 600; padding: 2px 7px; border-radius: 4px; white-space: nowrap; letter-spacing: 0.02em; }
 .chip.iett { background: var(--accent-soft); color: var(--accent); }
 .chip.oho { background: var(--oho-soft); color: var(--oho); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .est { color: var(--muted); font-size: 12px; margin-left: 3px; cursor: help; }
 .unknown { color: var(--muted); font-style: italic; }
 .hats { display: flex; flex-wrap: wrap; gap: 3px; }
@@ -224,20 +225,19 @@ td.c-hat { min-width: 180px; max-width: 320px; }
   .seg button { flex: 1; padding: 0 8px; }
   .tablewrap { background: transparent; border: 0; overflow: visible; }
   table, tbody { display: block; }
-  thead { display: none; }
-  tbody tr { display: grid; grid-template-columns: auto 1fr auto; gap: 6px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 8px; }
+  /* Başlıklar ve gizlenen hücreler ekrandan kalkar ama ekran okuyucuda kalır:
+     VoiceOver her hücrede doğru sütun adını söyleyebilsin */
+  thead, td.c-marka, td.c-yil, td.c-durum:has(.ok) { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+  tbody tr { position: relative; display: grid; grid-template-columns: auto 1fr auto; gap: 6px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 8px; }
   tbody tr:last-child { border-bottom: 1px solid var(--line); }
   td { padding: 0; display: block; min-width: 0 !important; max-width: none !important; }
   td.c-kapi { grid-column: 1; }
   td.c-filo { grid-column: 3; justify-self: end; }
   td.c-plaka { grid-column: 2; grid-row: 1; }
   td.c-model { grid-column: 1 / -1; font-weight: 600; }
-  td.c-marka { display: none; }
-  td.c-yil { display: none; }
   td.c-op { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
   td.c-hat { grid-column: 1 / -1; }
   td.c-durum { grid-column: 1 / -1; }
-  td.c-durum:has(.ok) { display: none; }
   .m-only { display: inline; }
 }
 @media (min-width: 761px) { .m-only { display: none; } }
@@ -295,9 +295,10 @@ td.c-hat { min-width: 180px; max-width: 320px; }
     <div class="mix" id="mix"></div>
   </div>
   <div class="tablewrap">
-    <table>
-      <thead><tr id="head"></tr></thead>
-      <tbody id="rows"></tbody>
+    <!-- Telefonda tablo kartlara dönüşünce tarayıcı tablo anlamını düşürdüğü için roller açıkça yazılı -->
+    <table role="table" aria-label="Araçlar">
+      <thead role="rowgroup"><tr id="head" role="row"></tr></thead>
+      <tbody id="rows" role="rowgroup"></tbody>
     </table>
   </div>
   <div class="pager">
@@ -467,7 +468,7 @@ td.c-hat { min-width: 180px; max-width: 320px; }
 
   const COLS = [
     ['kapi', 'Kapı no', 'c-kapi'], ['filo', 'Filo', 'c-filo'], ['plaka', 'Plaka', 'c-plaka'], ['marka', 'Marka', 'c-marka'],
-    ['model', 'Model', 'c-model'], ['yil', 'Yıl', 'c-yil'], ['operator', 'Operatör', 'c-op'], ['yer', 'Hat / Garaj', 'c-hat'], ['durum', 'Durum', 'c-durum'],
+    ['model', 'Model', 'c-model'], ['yil', 'Yıl', 'c-yil'], ['operator', 'Operatör', 'c-op'], ['yer', 'Hat / Garaj', 'c-hat', 'Hat veya garaj'], ['durum', 'Durum', 'c-durum'],
   ];
   function sortVal(a, k) { return k === 'yer' ? (a.hatlar || a.garaj || '') : k === 'yil' ? a._n : k === 'kapi' ? a._k : (a[k] || ''); }
   function sorter(k, dir) {
@@ -480,32 +481,32 @@ td.c-hat { min-width: 180px; max-width: 320px; }
   }
 
   function renderHead() {
-    $('head').innerHTML = COLS.map(([k, l, c]) => {
+    $('head').innerHTML = COLS.map(([k, l, c, sesli]) => {
       const on = S.sort === k;
-      return `<th class="${c}"${on ? ` aria-sort="${S.dir > 0 ? 'ascending' : 'descending'}"` : ''}><button type="button" data-sort="${k}">${l}<span class="arr">${on && S.dir < 0 ? '▼' : '▲'}</span></button></th>`;
+      return `<th class="${c}" role="columnheader" scope="col"${on ? ` aria-sort="${S.dir > 0 ? 'ascending' : 'descending'}"` : ''}><button type="button" data-sort="${k}"${sesli ? ` aria-label="${sesli}"` : ''}>${l}<span class="arr" aria-hidden="true">${on && S.dir < 0 ? '▼' : '▲'}</span></button></th>`;
     }).join('');
   }
 
   const plate = (p) => p ? `<span class="plate"><span>${esc(p)}</span></span>` : '<span class="plate none"><span>plaka yok</span></span>';
   const stateCls = d => d === 'Şüpheli' ? 'warn' : d === 'Canlı listede yok' ? 'info' : 'ok';
   const modelHtml = a => a.model
-    ? esc(a.model) + (a.kaynak === 'seri aralığı' ? '<span class="est" title="Model, kapı no serisinden tahmin edildi">≈</span>' : '')
+    ? esc(a.model) + (a.kaynak === 'seri aralığı' ? '<span class="est" title="Model, kapı no serisinden tahmin edildi" aria-hidden="true">≈</span><span class="sr">, tahmini</span>' : '')
     : '<span class="unknown">Bilinmiyor</span>';
 
   function row(a, i) {
     const yer = a.filo === 'ÖHO'
       ? `<div class="hats">${a.hatList.map(h => `<button type="button" class="hat" data-hat="${esc(h)}" title="${esc(h)} hattındaki araçlar">${esc(h)}</button>`).join('')}</div>`
       : (a.garaj ? `<span class="garaj">${esc(a.garaj)}</span>` : '<span class="unknown">—</span>');
-    return `<tr data-i="${i}" tabindex="0">
-      <td class="c-kapi"><span class="kapi">${esc(a.kapi)}</span></td>
-      <td class="c-filo"><span class="chip ${a.filo === 'İETT' ? 'iett' : 'oho'}">${esc(a.filo)}</span></td>
-      <td class="c-plaka">${plate(a.plaka)}${a.eskiPlaka ? `<span class="ex">ex. ${esc(a.eskiPlaka)}</span>` : ''}</td>
-      <td class="c-marka">${a.marka ? esc(a.marka) : '<span class="unknown">Bilinmiyor</span>'}</td>
-      <td class="c-model"><span class="m-only">${esc(a.marka)} </span>${modelHtml(a)}<span class="m-only">${a.yil ? ' · ' + esc(a.yil) : ''}</span></td>
-      <td class="c-yil num">${a.yil ? esc(a.yil) : '<span class="unknown">—</span>'}</td>
-      <td class="c-op">${esc(a.operator)}</td>
-      <td class="c-hat">${yer}</td>
-      <td class="c-durum"><span class="state ${stateCls(a.durum)}">${esc(a.durum)}</span></td>
+    return `<tr data-i="${i}" tabindex="0" role="row">
+      <td class="c-kapi" role="cell"><span class="kapi">${esc(a.kapi)}</span></td>
+      <td class="c-filo" role="cell"><span class="chip ${a.filo === 'İETT' ? 'iett' : 'oho'}">${esc(a.filo)}</span></td>
+      <td class="c-plaka" role="cell">${plate(a.plaka)}${a.eskiPlaka ? `<span class="ex">ex. ${esc(a.eskiPlaka)}</span>` : ''}</td>
+      <td class="c-marka" role="cell">${a.marka ? esc(a.marka) : '<span class="unknown">Bilinmiyor</span>'}</td>
+      <td class="c-model" role="cell"><span class="m-only" aria-hidden="true">${esc(a.marka)} </span>${modelHtml(a)}<span class="m-only" aria-hidden="true">${a.yil ? ' · ' + esc(a.yil) : ''}</span></td>
+      <td class="c-yil num" role="cell">${a.yil ? esc(a.yil) : '<span class="unknown">—</span>'}</td>
+      <td class="c-op" role="cell">${esc(a.operator)}</td>
+      <td class="c-hat" role="cell">${yer}</td>
+      <td class="c-durum" role="cell"><span class="state ${stateCls(a.durum)}">${esc(a.durum)}</span></td>
     </tr>`;
   }
 
@@ -536,7 +537,7 @@ td.c-hat { min-width: 180px; max-width: 320px; }
 
     renderHead();
     $('rows').innerHTML = slice.length ? slice.map((a, j) => row(a, start + j)).join('')
-      : `<tr class="emptyrow"><td colspan="${COLS.length}"><div class="empty"><b>Bu aramayla eşleşen araç yok</b>Arama metnini kısaltmayı ya da filtreleri temizlemeyi deneyin.</div></td></tr>`;
+      : `<tr class="emptyrow" role="row"><td colspan="${COLS.length}" role="cell"><div class="empty"><b>Bu aramayla eşleşen araç yok</b>Arama metnini kısaltmayı ya da filtreleri temizlemeyi deneyin.</div></td></tr>`;
     $('pageInfo').textContent = n ? `${fmt.format(start + 1)}–${fmt.format(Math.min(start + size, n))} / ${fmt.format(n)} araç · sayfa ${S.page + 1} / ${pages}` : '';
     $('prev').disabled = S.page === 0;
     $('next').disabled = S.page >= pages - 1;
