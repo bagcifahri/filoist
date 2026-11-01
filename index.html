@@ -179,7 +179,8 @@ td.c-hat { min-width: 180px; max-width: 320px; }
 
 /* Sayfalama */
 .pager { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; padding-block: 14px 8px; color: var(--muted); font-size: 13.5px; }
-.pager .btns { display: flex; gap: 6px; align-items: center; }
+.pager .btns, .goto { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.goto input { width: 76px; height: 34px; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 0 8px; text-align: center; }
 .pager button, .pager select { height: 34px; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 0 12px; cursor: pointer; }
 .pager button:disabled { opacity: .4; cursor: default; }
 
@@ -225,22 +226,22 @@ td.c-hat { min-width: 180px; max-width: 320px; }
   .seg button { flex: 1; padding: 0 8px; }
   .tablewrap { background: transparent; border: 0; overflow: visible; }
   table, tbody { display: block; }
-  /* Başlıklar ve gizlenen hücreler ekrandan kalkar ama ekran okuyucuda kalır:
-     VoiceOver her hücrede doğru sütun adını söyleyebilsin */
-  thead, td.c-marka, td.c-yil, td.c-durum:has(.ok) { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+  /* Başlıklar ekrandan kalkar ama ekran okuyucuda kalır: VoiceOver her hücrede doğru sütun adını söyleyebilsin.
+     Her bilgi kendi hücresinde görünür; hücre içinde gizli/yinelenen metin yoktur */
+  thead, td.c-durum:has(.ok) { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
   tbody tr { position: relative; display: grid; grid-template-columns: auto 1fr auto; gap: 6px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 8px; }
   tbody tr:last-child { border-bottom: 1px solid var(--line); }
   td { padding: 0; display: block; min-width: 0 !important; max-width: none !important; }
   td.c-kapi { grid-column: 1; }
   td.c-filo { grid-column: 3; justify-self: end; }
   td.c-plaka { grid-column: 2; grid-row: 1; }
-  td.c-model { grid-column: 1 / -1; font-weight: 600; }
+  td.c-marka { grid-column: 1; grid-row: 2; font-weight: 600; }
+  td.c-model { grid-column: 2; grid-row: 2; font-weight: 600; }
+  td.c-yil { grid-column: 3; grid-row: 2; justify-self: end; color: var(--muted); }
   td.c-op { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
   td.c-hat { grid-column: 1 / -1; }
   td.c-durum { grid-column: 1 / -1; }
-  .m-only { display: inline; }
 }
-@media (min-width: 761px) { .m-only { display: none; } }
 @media (prefers-reduced-motion: no-preference) {
   .detail { animation: slide .18s ease-out; }
   @keyframes slide { from { transform: translateX(24px); opacity: .6; } }
@@ -302,7 +303,14 @@ td.c-hat { min-width: 180px; max-width: 320px; }
     </table>
   </div>
   <div class="pager">
-    <div id="pageInfo" class="num"></div>
+    <!-- Sayfa değişince ekran okuyucu yeni aralığı duyurur -->
+    <div id="pageInfo" class="num" aria-live="polite"></div>
+    <form class="goto" id="goForm" novalidate>
+      <label for="goPage">Sayfaya git</label>
+      <input id="goPage" class="num" type="number" min="1" step="1" inputmode="numeric" autocomplete="off">
+      <span id="goTotal" class="num" aria-hidden="true"></span>
+      <button type="submit">Git</button>
+    </form>
     <div class="btns">
       <label for="pageSize">Sayfa başına</label>
       <select id="pageSize"><option>50</option><option selected>100</option><option>250</option><option>500</option><option value="0">Tümü</option></select>
@@ -371,9 +379,9 @@ td.c-hat { min-width: 180px; max-width: 320px; }
   // Marka renkleri (sonuç dağılım çubuğu)
   const PALETTE = ['#2f6fb0', '#d4842a', '#3a9a7a', '#a35aa8', '#c9493f', '#7b8a2e', '#5b6875'];
 
-  // Ayarlar masaüstü (exe) ve iPhone sürümünde değiştirilebilir; düz web sayfası varsayılanlarla çalışır
+  // Ayarlar masaüstü (exe), iPhone ve Android sürümünde değiştirilebilir; düz web sayfası varsayılanlarla çalışır
   const UYGULAMA = window.UYGULAMA || '';
-  const AYARLI = UYGULAMA === 'masaustu' || UYGULAMA === 'iphone';
+  const AYARLI = ['masaustu', 'iphone', 'android'].includes(UYGULAMA);
   const VARSAYILAN_AYAR = { filtre: true, boyut: true, varsayilan: 100, sirala: true, tema: '', olcek: 100, odak: true };
   const BOYUTLAR = [50, 100, 250, 500, 0], OLCEKLER = [90, 100, 115, 130, 150], TEMALAR = ['', 'light', 'dark'];
   const A = Object.assign({}, VARSAYILAN_AYAR);
@@ -502,7 +510,7 @@ td.c-hat { min-width: 180px; max-width: 320px; }
       <td class="c-filo" role="cell"><span class="chip ${a.filo === 'İETT' ? 'iett' : 'oho'}">${esc(a.filo)}</span></td>
       <td class="c-plaka" role="cell">${plate(a.plaka)}${a.eskiPlaka ? `<span class="ex">ex. ${esc(a.eskiPlaka)}</span>` : ''}</td>
       <td class="c-marka" role="cell">${a.marka ? esc(a.marka) : '<span class="unknown">Bilinmiyor</span>'}</td>
-      <td class="c-model" role="cell"><span class="m-only" aria-hidden="true">${esc(a.marka)} </span>${modelHtml(a)}<span class="m-only" aria-hidden="true">${a.yil ? ' · ' + esc(a.yil) : ''}</span></td>
+      <td class="c-model" role="cell">${modelHtml(a)}</td>
       <td class="c-yil num" role="cell">${a.yil ? esc(a.yil) : '<span class="unknown">—</span>'}</td>
       <td class="c-op" role="cell">${esc(a.operator)}</td>
       <td class="c-hat" role="cell">${yer}</td>
@@ -541,6 +549,12 @@ td.c-hat { min-width: 180px; max-width: 320px; }
     $('pageInfo').textContent = n ? `${fmt.format(start + 1)}–${fmt.format(Math.min(start + size, n))} / ${fmt.format(n)} araç · sayfa ${S.page + 1} / ${pages}` : '';
     $('prev').disabled = S.page === 0;
     $('next').disabled = S.page >= pages - 1;
+    // Tek sayfalık sonuçta "Sayfaya git" gereksiz
+    $('goForm').hidden = pages < 2;
+    $('goPage').max = pages;
+    $('goPage').setAttribute('aria-label', `Sayfaya git, toplam ${pages} sayfa`);
+    $('goTotal').textContent = '/ ' + fmt.format(pages);
+    if (document.activeElement !== $('goPage')) $('goPage').value = S.page + 1;
     syncInputs();
     save();
   }
@@ -573,6 +587,19 @@ td.c-hat { min-width: 180px; max-width: 320px; }
   $('reset').addEventListener('click', () => set({ q: '', filo: '', marka: '', model: '', yilMin: '', yilMax: '', operator: '', garaj: '', hat: '', durum: '' }));
   $('prev').addEventListener('click', () => { set({ page: S.page - 1 }); scrollToTable(); });
   $('next').addEventListener('click', () => { set({ page: S.page + 1 }); scrollToTable(); });
+  // Sayfaya git: geçersiz ya da aralık dışı sayı en yakın geçerli sayfaya çekilir
+  $('goForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const istenen = Math.round(Number($('goPage').value));
+    if (!istenen) { $('goPage').value = S.page + 1; return; }
+    const sayfa = Math.min(Math.max(istenen, 1), Number($('goPage').max) || 1);
+    set({ page: sayfa - 1 });
+    $('goPage').value = sayfa;
+    scrollToTable();
+    // Odak gidilen sayfanın ilk aracına geçer: ekran okuyucu oradan devam eder, telefonda klavye kapanır
+    const ilk = $('rows').querySelector('tr[data-i]');
+    if (ilk) ilk.focus({ preventScroll: true });
+  });
   $('toggleFilters').addEventListener('click', e => {
     const f = $('filters'), open = f.dataset.collapsed === 'true';
     f.dataset.collapsed = String(!open); e.currentTarget.setAttribute('aria-expanded', String(open));
@@ -677,7 +704,7 @@ td.c-hat { min-width: 180px; max-width: 320px; }
   }
   if (AYARLI) {
     $('openSettings').hidden = false;
-    // iPhone'da klavye ancak dokunuşla açıldığından açılışta odaklanma ayarı yalnızca masaüstünde
+    // Telefonlarda klavye ancak dokunuşla açıldığından açılışta odaklanma ayarı yalnızca masaüstünde
     $('grpKullanim').hidden = UYGULAMA !== 'masaustu';
     $('openSettings').addEventListener('click', openSettings);
     $('sClose').addEventListener('click', closeSettings);
@@ -693,6 +720,13 @@ td.c-hat { min-width: 180px; max-width: 320px; }
     $('aSifirla').addEventListener('click', () => { setAyar(Object.assign({}, VARSAYILAN_AYAR)); $('aSifirla').focus(); });
     applyAyar();
   }
+
+  // Android geri tuşu: açık panel varsa onu kapatır (true döner), yoksa uygulama kendisi kapanır
+  window.filoistGeri = () => {
+    if (!$('detail').hidden) { closeDetail(); return true; }
+    if (!$('settings').hidden) { closeSettings(); return true; }
+    return false;
+  };
 
   render();
   if (UYGULAMA === 'masaustu' && A.odak) $('q').focus();
