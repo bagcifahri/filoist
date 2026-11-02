@@ -52,7 +52,7 @@ jobs:
         run: |
           git config user.name 'Filoist tarama'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add veri/filo.json veri/durum.json veri/iett_canli.json uygulama/filo.js
+          git add veri/filo.json veri/durum.json veri/iett_canli.json veri/busphoto.json uygulama/filo.js
           git diff --cached --quiet && exit 0
           git commit -q -m "Günlük tarama $(TZ=Europe/Istanbul date '+%d.%m.%Y %H:%M')"
           for i in 1 2 3; do git pull -q --rebase origin main && git push -q origin HEAD:main && exit 0; sleep 5; done

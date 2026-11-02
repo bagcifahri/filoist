@@ -2,8 +2,9 @@
 
 GitHub Actions her gün çalıştırır (.github/workflows/filoist.yml). Adımlar:
 1. ÖHO listesi (emreunel159), İETT canlı filo listesi (İBB SOAP) ve busphoto.eu garaj listeleri indirilir.
-   İBB sunucusu GitHub'dan (yurt dışından) erişime kapalı; ulaşılamazsa İETT için veri/iett_canli.json içindeki
-   son liste kullanılır. Bu liste bilgisayardan yayın yapılırken (iphone/yayinla.py) Türkiye bağlantısıyla tazelenir.
+   İBB ve busphoto.eu, GitHub sunucularından gelen istekleri engelliyor. Bu iki kaynak için son başarılı indirme
+   veri/ klasöründe saklanır (yedek kayıt) ve ulaşılamazsa o kullanılır. Yedek kayıtlar bilgisayardan yayın
+   yapılırken (iphone/yayinla.py) Türkiye bağlantısıyla tazelenir.
 2. birlestir.py ile veri/filo.json yeniden üretilir.
 3. Güvenlik kontrolü: bir kaynak bozuk ya da eksik döndüyse (araç sayısı birden düştüyse) eski veri korunur.
 4. Değişiklik varsa uygulama/filo.js yeni tarihle yazılır. veri/durum.json her çalışmada güncellenir.
@@ -19,13 +20,17 @@ KOK = os.path.dirname(BURA)
 HAM = os.path.join(KOK, 'veri', 'ham')
 FILO = os.path.join(KOK, 'veri', 'filo.json')
 DURUM = os.path.join(KOK, 'veri', 'durum.json')
-IETT_KAYIT = os.path.join(KOK, 'veri', 'iett_canli.json')
 RAPOR = os.environ.get('RAPOR') or os.path.join(KOK, 'veri', 'rapor.md')
 sys.path.insert(0, BURA)
 import birlestir, uygulama_verisi  # noqa: E402
 
 ISTANBUL = datetime.timezone(datetime.timedelta(hours=3))
-TARAYICI = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Filoist'
+BASLIKLAR = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    # busphoto.eu sütun adlarını dile göre çeviriyor; birleştirme İngilizce adlara göre yazıldı
+    'Accept-Language': 'en-US,en;q=0.9',
+}
 OHO_ADRES = ('https://emreunel159.com.tr/?kod=all&kapikod_search=&kapikod=&marka=&model=&yil=&sirket=&owners='
              '&perPage=5000')
 IETT_ADRES = 'https://api.ibb.gov.tr/iett/FiloDurum/SeferGerceklesme.asmx'
@@ -35,12 +40,13 @@ ESIK = 0.95
 
 
 def indir(adres, veri=None, basliklar=None, deneme_sayisi=3, sure=120):
-    istek = urllib.request.Request(adres, data=veri, headers={'User-Agent': TARAYICI, **(basliklar or {})})
+    istek = urllib.request.Request(adres, data=veri, headers={**BASLIKLAR, **(basliklar or {})})
     for deneme in range(deneme_sayisi):
         try:
             return urllib.request.urlopen(istek, timeout=sure).read().decode('utf-8')
         except Exception as e:
-            if deneme == deneme_sayisi - 1:
+            # 403: site bu bağlantıyı engelliyor, yeniden denemek anlamsız
+            if deneme == deneme_sayisi - 1 or getattr(e, 'code', None) == 403:
                 raise RuntimeError(f'{adres.split("?")[0]} indirilemedi: {e}') from e
             time.sleep(10)
 
@@ -54,7 +60,7 @@ def oho_indir():
     return [{k: d.get(k) for k in alanlar} for d in json.loads(m.group(1))]
 
 
-def iett_indir(deneme_sayisi=3, sure=120):
+def iett_indir(deneme_sayisi=2, sure=45):
     govde = ('<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">'
              '<soap:Body><GetFiloAracKonum_json xmlns="http://tempuri.org/" /></soap:Body></soap:Envelope>').encode()
     yanit = indir(IETT_ADRES, govde, {'Content-Type': 'text/xml; charset=utf-8',
@@ -63,50 +69,83 @@ def iett_indir(deneme_sayisi=3, sure=120):
     m = re.search(r'<GetFiloAracKonum_jsonResult>(.*)</GetFiloAracKonum_jsonResult>', yanit, re.S)
     if not m:
         raise RuntimeError('İETT canlı filo yanıtı beklenen biçimde değil')
-    return json.loads(H.unescape(m.group(1)))
-
-
-def iett_kaydet(liste, zaman):
-    """Canlı listenin İETT kısmını (kapı no, plaka, garaj) depoda saklar; GitHub İBB'ye ulaşamazsa bu kullanılır."""
-    araclar = [{'KapiNo': r['KapiNo'], 'Plaka': r['Plaka'], 'Garaj': r['Garaj']} for r in liste if '-' not in r['KapiNo']]
-    with open(IETT_KAYIT, 'w', encoding='utf-8', newline='\n') as f:
-        json.dump({'tarih': zaman.isoformat(), 'araclar': araclar}, f, ensure_ascii=False, separators=(',', ':'))
-    return len(araclar)
-
-
-def iett_tazele():
-    """Bilgisayardan yayın yapılırken çağrılır: İETT canlı listesini indirip kaydeder. Başarısızsa sessizce geçer."""
-    try:
-        n = iett_kaydet(iett_indir(deneme_sayisi=2, sure=60), datetime.datetime.now(ISTANBUL).replace(microsecond=0))
-        print('İETT canlı listesi tazelendi:', n, 'araç')
-    except Exception as e:
-        print('UYARI: İETT canlı listesi tazelenemedi, eldeki liste kullanılacak.', e)
+    # Yalnız İETT araçları ve birleştirmede kullanılan alanlar saklanır (ÖHO verisi emreunel159'dan gelir)
+    return [{'KapiNo': r['KapiNo'], 'Plaka': r['Plaka'], 'Garaj': r['Garaj']}
+            for r in json.loads(H.unescape(m.group(1))) if '-' not in r['KapiNo']]
 
 
 def metin(s):
     return H.unescape(re.sub(r'<[^>]+>', '', s)).strip()
 
 
+BP_ALANLAR = ['#', 'Plate', 'Model', 'Built', 'Remarks', 'To...', 'status']
+
+
 def busphoto_indir():
     cikti = []
     for did in BUSPHOTO_GARAJLAR:
         h = indir(f'https://busphoto.eu/list.php?did={did}')
-        baslik = re.search(r'<h2[^>]*>(.*?)</h2>', h, re.S)
-        garaj = metin(baslik.group(1)).replace('Istanbul, ', '') if baslik else ''
         w = h.find('<h4>Withdrawn')
         for parca, durum in ((h[:w] if w > 0 else h, 'active'), (h[w:] if w > 0 else '', 'withdrawn')):
             for tablo in re.findall(r'<table>(.*?)</table>', parca, re.S):
                 if '/vehicle/' not in tablo:
                     continue
                 basliklar = [metin(x) for x in re.findall(r'<th[^>]*>(.*?)</th>', tablo, re.S)]
+                if not {'#', 'Model', 'Built'} <= set(basliklar):
+                    raise RuntimeError(f'busphoto.eu sütun adları değişmiş: {basliklar}')
                 for tr in re.findall(r'<tr[^>]*>(.*?)</tr>', tablo, re.S):
                     if '/vehicle/' not in tr:
                         continue
                     d = dict(zip(basliklar, [metin(c) for c in re.findall(r'<td[^>]*>(.*?)</td>', tr, re.S)]))
-                    d.update(did=str(did), garage=garaj, status=durum, vid=re.search(r'/vehicle/(\d+)/', tr).group(1))
-                    cikti.append(d)
+                    d['status'] = durum
+                    # Yalnız birleştirmede kullanılan alanlar saklanır
+                    cikti.append({k: d.get(k, '') for k in BP_ALANLAR})
         time.sleep(2)  # siteyi yormamak için
     return cikti
+
+
+# GitHub'dan erişilemeyen kaynaklar: (rapordaki adı, indirme işlevi, yedek kayıt dosyası)
+YEDEKLI = {
+    'iett': ('İETT canlı listesi', iett_indir, os.path.join(KOK, 'veri', 'iett_canli.json')),
+    'busphoto': ('busphoto.eu listeleri', busphoto_indir, os.path.join(KOK, 'veri', 'busphoto.json')),
+}
+
+
+def yedek_yaz(yol, kayitlar, zaman):
+    with open(yol, 'w', encoding='utf-8', newline='\n') as f:
+        json.dump({'tarih': zaman.isoformat(), 'araclar': kayitlar}, f, ensure_ascii=False, separators=(',', ':'))
+
+
+def yedekli_indir(anahtar, zaman, notlar):
+    """Kaynağı indirir ve yedek kaydı tazeler; ulaşılamazsa son yedek kaydı döndürür ve rapora not düşer."""
+    ad, islev, yol = YEDEKLI[anahtar]
+    try:
+        kayitlar = islev()
+        if not kayitlar:
+            raise RuntimeError(f'{ad} boş döndü')
+        yedek_yaz(yol, kayitlar, zaman)
+        return kayitlar
+    except Exception as e:
+        if not os.path.exists(yol):
+            raise
+        kayit = yukle(yol, {})
+        print(' ', e, '→ son kayıt kullanılıyor:', kayit['tarih'])
+        notlar.append(f'{ad} ({uygulama_verisi.tarih_yazi(kayit["tarih"])})')
+        return kayit['araclar']
+
+
+def yedekleri_tazele():
+    """Bilgisayardan yayın yapılırken çağrılır: GitHub'ın ulaşamadığı kaynakları indirip yedek kayıtları tazeler."""
+    zaman = datetime.datetime.now(ISTANBUL).replace(microsecond=0)
+    for ad, islev, yol in YEDEKLI.values():
+        try:
+            kayitlar = islev()
+            if not kayitlar:
+                raise RuntimeError('boş döndü')
+            yedek_yaz(yol, kayitlar, zaman)
+            print(f'{ad} tazelendi: {len(kayitlar)} kayıt')
+        except Exception as e:
+            print(f'UYARI: {ad} tazelenemedi, eldeki kayıt kullanılacak.', e)
 
 
 def yukle(yol, varsayilan):
@@ -125,7 +164,8 @@ def sayi(n):
 def sayilar(araclar):
     c = collections.Counter(a['filo'] for a in araclar)
     aktif = sum(1 for a in araclar if a['filo'] == 'İETT' and a['durum'] == 'Aktif')
-    return {'ÖHO': c['ÖHO'], 'İETT': c['İETT'], 'İETT aktif': aktif}
+    modelli = sum(1 for a in araclar if a['model'])
+    return {'ÖHO': c['ÖHO'], 'İETT': c['İETT'], 'İETT aktif': aktif, 'modeli bilinen': modelli}
 
 
 ADLAR = {'plaka': 'plaka', 'eskiPlaka': 'eski plaka', 'marka': 'marka', 'model': 'model', 'yil': 'yıl',
@@ -167,27 +207,17 @@ def main():
     durum = yukle(DURUM, {'veriGuncelleme': '2026-11-01'})
     durum['sonKontrol'] = simdi.isoformat()
     rapor = [f'### Tarama: {uygulama_verisi.tarih_yazi(simdi.isoformat())}', '']
-    iett_notu = ''
+    yedekten = []
 
     try:
         print('ÖHO listesi indiriliyor…')
         oho = oho_indir()
         print(' ', len(oho), 'araç')
         print('İETT canlı filo listesi indiriliyor…')
-        try:
-            iett = iett_indir(deneme_sayisi=2, sure=45)
-            iett_kaydet(iett, simdi)
-            print(' ', len(iett), 'kayıt')
-        except Exception as e:
-            if not os.path.exists(IETT_KAYIT):
-                raise
-            kayit = yukle(IETT_KAYIT, {})
-            iett = kayit['araclar']
-            iett_notu = (f'ℹ️ İETT canlı listesine GitHub’dan ulaşılamadı; {uygulama_verisi.tarih_yazi(kayit["tarih"])} '
-                         'tarihli son liste kullanıldı. Bu liste bilgisayardan yayın yapınca tazelenir.')
-            print(' ', e, '→ son liste kullanılıyor:', kayit['tarih'])
+        iett = yedekli_indir('iett', simdi, yedekten)
+        print(' ', len(iett), 'kayıt')
         print('busphoto.eu garaj listeleri indiriliyor…')
-        bp = busphoto_indir()
+        bp = yedekli_indir('busphoto', simdi, yedekten)
         print(' ', len(bp), 'kayıt')
     except Exception as e:
         durum['sonuc'] = 'Kaynak indirilemedi'
@@ -215,7 +245,7 @@ def main():
             kaydet_kompakt(FILO, eski)
         durum['sonuc'] = 'Şüpheli düşüş, yayınlanmadı'
         kaydet(DURUM, durum)
-        rapor += ['⚠️ **Araç sayısı beklenmedik biçimde düştü; kaynak bozuk olabilir. Eski veri korundu, yayınlanmadı.**',
+        rapor += ['⚠️ **Sayılar beklenmedik biçimde düştü; kaynak bozuk olabilir. Eski veri korundu, yayınlanmadı.**',
                   ''] + [f'- {s}' for s in sorunlar]
         open(RAPOR, 'w', encoding='utf-8').write('\n'.join(rapor) + '\n')
         print('Güvenlik kontrolü geçmedi:', sorunlar)
@@ -238,8 +268,9 @@ def main():
         durum['sonuc'] = 'Değişiklik yok'
         kaydet(DURUM, durum)
         rapor += ['☑️ **Değişiklik yok.** Kaynaklar tarandı, veriler aynı.', '']
-    if iett_notu:
-        rapor += [iett_notu, '']
+    if yedekten:
+        rapor += ['ℹ️ GitHub’dan ulaşılamadığı için son kayıt kullanıldı: ' + ', '.join(yedekten)
+                  + '. Bu kayıtlar bilgisayardan yayın yapınca tazelenir.', '']
     rapor += [f'Toplam: {sayi(len(yeni))} araç (ÖHO {sayi(s_yeni["ÖHO"])}, İETT {sayi(s_yeni["İETT"])})']
     open(RAPOR, 'w', encoding='utf-8').write('\n'.join(rapor) + '\n')
     print('\n'.join(rapor))

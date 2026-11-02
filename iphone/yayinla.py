@@ -6,7 +6,7 @@ GitHub deposu (bagcifahri/filoist) sitenin kaynağıdır. Depodaki iş akışı 
 
 Adımlar:
 1. GitHub'daki güncel veri bilgisayara alınır (scripts/veri_esitle.py); veri hep depodan gelir.
-   İETT canlı listesi burada tazelenir: İBB sunucusu GitHub'dan erişime kapalı, bilgisayardan açık.
+   GitHub'ın ulaşamadığı İETT ve busphoto.eu kayıtları burada, Türkiye bağlantısıyla tazelenir.
 2. iphone/pwa_hazirla.py ile site bilgisayarda da üretilir (hata varsa yükleme yapılmaz).
 3. Kaynak dosyalar iphone/yayin/ (deponun yerel kopyası) klasörüne aktarılır, değişiklik varsa gönderilir.
 
@@ -24,6 +24,7 @@ import guncelle, veri_esitle  # noqa: E402
 KAYNAKLAR = [
     '.github/workflows/filoist.yml', '.gitignore',
     'uygulama/index.html', 'uygulama/filo.js', 'veri/filo.json', 'veri/durum.json', 'veri/iett_canli.json',
+    'veri/busphoto.json',
     'scripts/guncelle.py', 'scripts/birlestir.py', 'scripts/uygulama_verisi.py', 'scripts/veri_esitle.py',
     'masaustu/sayfa_hazirla.py', 'masaustu/fontlar',
     'iphone/pwa_hazirla.py', 'iphone/simge_ciz.py', 'iphone/yayinla.py',
@@ -38,7 +39,7 @@ def git(*args, yakala=False):
 def main():
     sys.stdout.reconfigure(encoding='utf-8')
     veri_esitle.esitle()
-    guncelle.iett_tazele()
+    guncelle.yedekleri_tazele()
     subprocess.run([sys.executable, os.path.join(BURA, 'pwa_hazirla.py')], check=True)
 
     # Yerel kopya, KAYNAKLAR listesiyle birebir aynı olsun (.git hariç)
