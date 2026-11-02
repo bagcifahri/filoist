@@ -121,8 +121,8 @@ button, input, select { font: inherit; color: inherit; }
 
 /* Sonuç özeti */
 .summary { display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: center; padding-block: 18px 12px; }
-.count { font-family: var(--display); font-weight: 700; font-size: 26px; line-height: 1; }
-.count small { font-family: var(--body); font-weight: 500; font-size: 14px; color: var(--muted); margin-left: 6px; }
+.count { font-family: var(--display); font-weight: 700; font-size: 26px; line-height: 1; margin: 0; }
+.count small { font-family: var(--body); font-weight: 500; font-size: 14px; color: var(--muted); margin-left: 2px; }
 .minis { display: flex; flex-wrap: wrap; gap: 6px 20px; color: var(--muted); font-size: 13.5px; }
 .minis b { color: var(--ink); font-weight: 600; }
 .mix { flex: 1 1 320px; min-width: 0; display: grid; gap: 6px; }
@@ -179,6 +179,7 @@ td.c-hat { min-width: 180px; max-width: 320px; }
 
 /* Sayfalama */
 .pager { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; padding-block: 14px 8px; color: var(--muted); font-size: 13.5px; }
+.pageinfo { font: inherit; margin: 0; }
 .pager .btns, .goto { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .goto input { width: 76px; height: 34px; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 0 8px; text-align: center; }
 .pager button, .pager select { height: 34px; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 0 12px; cursor: pointer; }
@@ -291,7 +292,8 @@ td.c-hat { min-width: 180px; max-width: 320px; }
 
 <main class="wrap">
   <div class="summary">
-    <div class="count num" id="count"></div>
+    <!-- Ekran okuyucuda başlıklarla hızlı gezinmek için sonuç sayısı ve sayfa bilgisi 2. seviye başlık -->
+    <h2 class="count num" id="count"></h2>
     <div class="minis num" id="minis"></div>
     <div class="mix" id="mix"></div>
   </div>
@@ -304,7 +306,7 @@ td.c-hat { min-width: 180px; max-width: 320px; }
   </div>
   <div class="pager">
     <!-- Sayfa değişince ekran okuyucu yeni aralığı duyurur -->
-    <div id="pageInfo" class="num" aria-live="polite"></div>
+    <h2 id="pageInfo" class="pageinfo num" aria-live="polite"></h2>
     <form class="goto" id="goForm" novalidate>
       <label for="goPage">Sayfaya git</label>
       <input id="goPage" class="num" type="number" min="1" step="1" inputmode="numeric" autocomplete="off">
@@ -532,7 +534,8 @@ td.c-hat { min-width: 180px; max-width: 320px; }
     if (S.page >= pages) S.page = pages - 1;
     const start = S.page * size, slice = current.slice(start, start + size);
 
-    $('count').innerHTML = `${fmt.format(n)}<small>araç${n !== all.length ? ' bulundu' : ''}</small>`;
+    // Boşluk, ekran okuyucunun sayıyla "araç" kelimesini bitişik okumaması için
+    $('count').innerHTML = `${fmt.format(n)} <small>araç${n !== all.length ? ' bulundu' : ''}</small>`;
     const iett = current.filter(a => a.filo === 'İETT').length;
     const yrs = current.map(a => a._n).filter(Boolean);
     const avg = yrs.length ? yrs.reduce((s, y) => s + y, 0) / yrs.length : 0;
@@ -551,6 +554,8 @@ td.c-hat { min-width: 180px; max-width: 320px; }
     $('rows').innerHTML = slice.length ? slice.map((a, j) => row(a, start + j)).join('')
       : `<tr class="emptyrow" role="row"><td colspan="${COLS.length}" role="cell"><div class="empty"><b>Bu aramayla eşleşen araç yok</b>Arama metnini kısaltmayı ya da filtreleri temizlemeyi deneyin.</div></td></tr>`;
     $('pageInfo').textContent = n ? `${fmt.format(start + 1)}–${fmt.format(Math.min(start + size, n))} / ${fmt.format(n)} araç · sayfa ${S.page + 1} / ${pages}` : '';
+    // Boş başlık ekran okuyucunun başlık listesinde anlamsız bir öğe olarak kalmasın
+    $('pageInfo').hidden = !n;
     $('prev').disabled = S.page === 0;
     $('next').disabled = S.page >= pages - 1;
     // Tek sayfalık sonuçta "Sayfaya git" gereksiz
