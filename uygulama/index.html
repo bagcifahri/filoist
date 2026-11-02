@@ -646,7 +646,7 @@ td.c-hat { min-width: 180px; max-width: 320px; }
       ['Durum', `<span class="state ${stateCls(a.durum)}">${esc(a.durum)}</span>`],
     ].filter(Boolean);
     const note = a.not ? `<div class="note"><b>Not:</b> ${esc(a.not)}</div>` : '';
-    const stateNote = a.durum === 'Canlı listede yok' ? `<div class="note">Bu araç filo kayıtlarında görünüyor ama ${esc(D.tarih)} tarihli İETT canlı filo listesinde yok. Yeni teslim edilmiş ya da geçici olarak hizmet dışı olabilir.</div>` : '';
+    const stateNote = a.durum === 'Canlı listede yok' ? `<div class="note">Bu araç filo kayıtlarında görünüyor ama son alınan İETT canlı filo listesinde yok. Yeni teslim edilmiş ya da geçici olarak hizmet dışı olabilir.</div>` : '';
     const acts = [
       a.marka ? `<button type="button" data-f='${esc(JSON.stringify({ marka: a.marka, model: '' }))}'>Tüm ${esc(a.marka)} araçları</button>` : '',
       a.model ? `<button type="button" data-f='${esc(JSON.stringify({ marka: a.marka, model: a.model }))}'>Aynı modeldeki araçlar</button>` : '',

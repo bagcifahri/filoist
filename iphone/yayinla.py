@@ -38,7 +38,11 @@ def git(*args, yakala=False):
 
 def main():
     sys.stdout.reconfigure(encoding='utf-8')
-    veri_esitle.esitle()
+    try:
+        veri_esitle.esitle()
+    except Exception as e:
+        # Güncel veri alınmadan gönderilirse GitHub'daki daha yeni veri eskisiyle ezilir
+        sys.exit(f'GitHub\'daki güncel veri alınamadı, yayın yapılmadı: {e}')
     guncelle.yedekleri_tazele()
     subprocess.run([sys.executable, os.path.join(BURA, 'pwa_hazirla.py')], check=True)
 

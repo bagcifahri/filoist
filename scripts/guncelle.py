@@ -6,7 +6,8 @@ GitHub Actions her gün çalıştırır (.github/workflows/filoist.yml). Adımla
    veri/ klasöründe saklanır (yedek kayıt) ve ulaşılamazsa o kullanılır. Yedek kayıtlar bilgisayardan yayın
    yapılırken (iphone/yayinla.py) Türkiye bağlantısıyla tazelenir.
 2. birlestir.py ile veri/filo.json yeniden üretilir.
-3. Güvenlik kontrolü: bir kaynak bozuk ya da eksik döndüyse (araç sayısı birden düştüyse) eski veri korunur.
+3. Güvenlik kontrolü: bir kaynak bozuk ya da eksik döndüyse (araç sayısı birden düştüyse) eski veri ve eski
+   yedek kayıtlar korunur.
 4. Değişiklik varsa uygulama/filo.js yeni tarihle yazılır. veri/durum.json her çalışmada güncellenir.
 5. Değişikliklerin dökümü rapor dosyasına yazılır (bildirim olarak GitHub'da yorum atılır).
 
@@ -116,14 +117,18 @@ def yedek_yaz(yol, kayitlar, zaman):
         json.dump({'tarih': zaman.isoformat(), 'araclar': kayitlar}, f, ensure_ascii=False, separators=(',', ':'))
 
 
-def yedekli_indir(anahtar, zaman, notlar):
-    """Kaynağı indirir ve yedek kaydı tazeler; ulaşılamazsa son yedek kaydı döndürür ve rapora not düşer."""
+def yedekli_indir(anahtar, notlar, tazeler):
+    """Kaynağı indirir; ulaşılamazsa son yedek kaydı döndürür ve rapora not düşer.
+
+    Taze indirilen kayıt hemen yedeğe yazılmaz, tazeler listesine eklenir: güvenlik kontrolü geçerse yazılır.
+    Böylece bozuk bir indirme sağlam yedeğin üstüne yazılmaz.
+    """
     ad, islev, yol = YEDEKLI[anahtar]
     try:
         kayitlar = islev()
         if not kayitlar:
             raise RuntimeError(f'{ad} boş döndü')
-        yedek_yaz(yol, kayitlar, zaman)
+        tazeler.append((yol, kayitlar))
         return kayitlar
     except Exception as e:
         if not os.path.exists(yol):
@@ -140,8 +145,9 @@ def yedekleri_tazele():
     for ad, islev, yol in YEDEKLI.values():
         try:
             kayitlar = islev()
-            if not kayitlar:
-                raise RuntimeError('boş döndü')
+            onceki = len(yukle(yol, {}).get('araclar', []))
+            if len(kayitlar) < onceki * ESIK:
+                raise RuntimeError(f'kayıt sayısı düştü ({onceki} → {len(kayitlar)}), kaynak bozuk olabilir')
             yedek_yaz(yol, kayitlar, zaman)
             print(f'{ad} tazelendi: {len(kayitlar)} kayıt')
         except Exception as e:
@@ -201,31 +207,53 @@ def liste(baslik, satirlar, sinir=40):
     return cikti + ['']
 
 
+def rapor_yaz(satirlar):
+    with open(RAPOR, 'w', encoding='utf-8', newline='\n') as f:
+        f.write('\n'.join(satirlar) + '\n')
+
+
+def basarisiz(durum, simdi, sonuc, rapor, satirlar):
+    """Başarısız taramayı kaydeder. sonKontrol değişmez: uygulama son *başarılı* kontrolü gösterir."""
+    durum['sonuc'] = sonuc
+    durum['sonHata'] = simdi.isoformat()
+    kaydet(DURUM, durum)
+    rapor_yaz(rapor + satirlar)
+    return 1
+
+
 def main():
     simdi = datetime.datetime.now(ISTANBUL).replace(microsecond=0)
     eski = yukle(FILO, [])
     durum = yukle(DURUM, {'veriGuncelleme': '2026-11-01'})
-    durum['sonKontrol'] = simdi.isoformat()
     rapor = [f'### Tarama: {uygulama_verisi.tarih_yazi(simdi.isoformat())}', '']
-    yedekten = []
+    try:
+        return tara(simdi, eski, durum, rapor)
+    except Exception as e:
+        # Beklenmedik hata (ör. birleştirme): eski veri yerinde kalsın, rapor yine yazılsın
+        if eski:
+            kaydet_kompakt(FILO, eski)
+        print('Beklenmedik hata:', repr(e))
+        return basarisiz(durum, simdi, 'Beklenmedik hata', rapor,
+                         ['❌ **Tarama beklenmedik bir hatayla durdu, veri değiştirilmedi.**', '', f'`{e!r}`'])
+
+
+def tara(simdi, eski, durum, rapor):
+    yedekten, tazeler = [], []
 
     try:
         print('ÖHO listesi indiriliyor…')
         oho = oho_indir()
         print(' ', len(oho), 'araç')
         print('İETT canlı filo listesi indiriliyor…')
-        iett = yedekli_indir('iett', simdi, yedekten)
+        iett = yedekli_indir('iett', yedekten, tazeler)
         print(' ', len(iett), 'kayıt')
         print('busphoto.eu garaj listeleri indiriliyor…')
-        bp = yedekli_indir('busphoto', simdi, yedekten)
+        bp = yedekli_indir('busphoto', yedekten, tazeler)
         print(' ', len(bp), 'kayıt')
     except Exception as e:
-        durum['sonuc'] = 'Kaynak indirilemedi'
-        kaydet(DURUM, durum)
-        rapor += [f'❌ **Kaynak indirilemedi, veri değiştirilmedi.**', '', f'`{e}`']
-        open(RAPOR, 'w', encoding='utf-8').write('\n'.join(rapor) + '\n')
         print(e)
-        return 1
+        return basarisiz(durum, simdi, 'Kaynak indirilemedi', rapor,
+                         ['❌ **Kaynak indirilemedi, veri değiştirilmedi.**', '', f'`{e}`'])
 
     os.makedirs(HAM, exist_ok=True)
     for ad, veri in (('ohm.json', oho), ('filo_konum.json', iett), ('bp_iett.json', bp)):
@@ -243,28 +271,36 @@ def main():
     if sorunlar:
         if eski:
             kaydet_kompakt(FILO, eski)
-        durum['sonuc'] = 'Şüpheli düşüş, yayınlanmadı'
-        kaydet(DURUM, durum)
-        rapor += ['⚠️ **Sayılar beklenmedik biçimde düştü; kaynak bozuk olabilir. Eski veri korundu, yayınlanmadı.**',
-                  ''] + [f'- {s}' for s in sorunlar]
-        open(RAPOR, 'w', encoding='utf-8').write('\n'.join(rapor) + '\n')
         print('Güvenlik kontrolü geçmedi:', sorunlar)
-        return 1
+        return basarisiz(durum, simdi, 'Şüpheli düşüş, yayınlanmadı', rapor,
+                         ['⚠️ **Sayılar beklenmedik biçimde düştü; kaynak bozuk olabilir. Eski veri korundu, yayınlanmadı.**',
+                          ''] + [f'- {s}' for s in sorunlar])
+
+    # Kontrol geçti: taze indirilen kaynaklar artık güvenle yedeğe yazılabilir
+    for yol, kayitlar in tazeler:
+        yedek_yaz(yol, kayitlar, simdi)
 
     eklenen, cikan, degisen, y = karsilastir(eski, yeni)
     durum['sayilar'] = s_yeni
-    if eklenen or cikan or degisen:
+    durum['sonKontrol'] = simdi.isoformat()
+    durum.pop('sonHata', None)
+    # Karar araç bazında tüm alanlarla verilir; yalnızca sıra değiştiyse değişiklik sayılmaz
+    if {a['kapi']: a for a in eski} != y:
         durum['veriGuncelleme'] = simdi.isoformat()
         durum['sonuc'] = 'Güncellendi'
         kaydet(DURUM, durum)
         uygulama_verisi.yaz()
-        rapor += [f'✅ **Veriler güncellendi.** {len(eklenen)} yeni, {len(cikan)} çıkan, '
-                  f'{len(degisen)} değişen araç.', '']
+        ozet = (f'{len(eklenen)} yeni, {len(cikan)} çıkan, {len(degisen)} değişen araç.' if eklenen or cikan or degisen
+                else 'Yalnızca araçların bilgi kaynağı kaydı değişti.')
+        rapor += [f'✅ **Veriler güncellendi.** {ozet}', '']
         rapor += liste('Yeni araçlar', [f'{k} · {y[k]["filo"]} · {" ".join(filter(None, [y[k]["marka"], y[k]["model"]])) or "model bilinmiyor"}'
                                         for k in eklenen])
         rapor += liste('Listeden çıkan araçlar', cikan)
         rapor += liste('Değişen araçlar', [f'{k}: ' + '; '.join(f) for k, f in degisen])
     else:
+        # Dosya eski haliyle kalsın; yoksa sırası farklı ama içeriği aynı bir dosya kaydedilir
+        if eski:
+            kaydet_kompakt(FILO, eski)
         durum['sonuc'] = 'Değişiklik yok'
         kaydet(DURUM, durum)
         rapor += ['☑️ **Değişiklik yok.** Kaynaklar tarandı, veriler aynı.', '']
@@ -272,13 +308,13 @@ def main():
         rapor += ['ℹ️ GitHub’dan ulaşılamadığı için son kayıt kullanıldı: ' + ', '.join(yedekten)
                   + '. Bu kayıtlar bilgisayardan yayın yapınca tazelenir.', '']
     rapor += [f'Toplam: {sayi(len(yeni))} araç (ÖHO {sayi(s_yeni["ÖHO"])}, İETT {sayi(s_yeni["İETT"])})']
-    open(RAPOR, 'w', encoding='utf-8').write('\n'.join(rapor) + '\n')
+    rapor_yaz(rapor)
     print('\n'.join(rapor))
     return 0
 
 
 def kaydet_kompakt(yol, veri):
-    with open(yol, 'w', encoding='utf-8') as f:
+    with open(yol, 'w', encoding='utf-8', newline='\n') as f:
         json.dump(veri, f, ensure_ascii=False, separators=(',', ':'))
 
 
