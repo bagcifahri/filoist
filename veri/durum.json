@@ -1,5 +1,11 @@
 {
-  "veriGuncelleme": "2026-11-01",
-  "sonKontrol": "2026-11-02T11:23:05+03:00",
-  "sonuc": "Kaynak indirilemedi"
+  "veriGuncelleme": "2026-11-02T11:31:50+03:00",
+  "sonKontrol": "2026-11-02T11:31:50+03:00",
+  "sonuc": "Güncellendi",
+  "sayilar": {
+    "ÖHO": 3070,
+    "İETT": 3872,
+    "İETT aktif": 3861,
+    "modeli bilinen": 6908
+  }
 }
