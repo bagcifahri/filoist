@@ -1,0 +1,100 @@
+# Filoist: günlük tarama ve iPhone sürümünün yayını (https://bagcifahri.github.io/filoist/)
+#
+# - Her gün 09:00'da (İstanbul) kaynaklar taranır; değişiklik varsa veri kaydedilir ve site yeniden yayınlanır.
+# - Her taramanın sonucu "Günlük tarama raporu" konusuna yorum olarak yazılır; GitHub bildirim gönderir.
+# - Bilgisayardan yayinla.py ile kod gönderildiğinde (push) tarama yapılmadan yalnızca site yayınlanır.
+# - Actions sekmesindeki "Run workflow" düğmesi taramayı elle başlatır.
+name: Filoist
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # 06:00 UTC = 09:00 İstanbul (GitHub yoğunlukta birkaç dakika geciktirebilir)
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  issues: write
+
+concurrency:
+  group: filoist
+  cancel-in-progress: false
+
+jobs:
+  tara-ve-yayinla:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.yayin.outputs.page_url }}
+    env:
+      TARAMA: ${{ github.event_name != 'push' }}
+      RAPOR: ${{ github.workspace }}/../rapor.md
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Gerekli Python paketi (simge çizimi)
+        run: pip install --quiet pillow
+
+      - name: Kaynakları tara
+        id: tara
+        if: env.TARAMA == 'true'
+        run: python scripts/guncelle.py
+
+      - name: Veriyi kaydet
+        if: always() && env.TARAMA == 'true'
+        run: |
+          git config user.name 'Filoist tarama'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add veri/filo.json veri/durum.json uygulama/filo.js
+          git diff --cached --quiet && exit 0
+          git commit -q -m "Günlük tarama $(TZ=Europe/Istanbul date '+%d.%m.%Y %H:%M')"
+          for i in 1 2 3; do git pull -q --rebase origin main && git push -q origin HEAD:main && exit 0; sleep 5; done
+          exit 1
+
+      - name: Siteyi hazırla
+        if: always() && steps.tara.outcome != 'failure'
+        run: python iphone/pwa_hazirla.py
+
+      - uses: actions/configure-pages@v5
+        if: always() && steps.tara.outcome != 'failure'
+
+      - uses: actions/upload-pages-artifact@v4
+        if: always() && steps.tara.outcome != 'failure'
+        with:
+          path: iphone/site
+          include-hidden-files: true
+
+      - name: Yayınla
+        id: yayin
+        if: always() && steps.tara.outcome != 'failure'
+        uses: actions/deploy-pages@v4
+
+      - name: Bildirim gönder
+        if: always() && env.TARAMA == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SAHIP: ${{ github.repository_owner }}
+          KAYIT: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          YAYIN: ${{ steps.yayin.outcome }}
+        run: |
+          [ -f "$RAPOR" ] || printf '❌ **Tarama beklenmedik bir hatayla durdu.**\n\n' > "$RAPOR"
+          case "$YAYIN" in
+            success) echo "🌐 Site yayınlandı: https://bagcifahri.github.io/filoist/" >> "$RAPOR" ;;
+            skipped) echo "🌐 Site yayınlanmadı." >> "$RAPOR" ;;
+            *) echo "❌ Site yayınlanamadı." >> "$RAPOR" ;;
+          esac
+          printf '\n[Çalışma kaydı](%s)\n' "$KAYIT" >> "$RAPOR"
+          BASLIK='Günlük tarama raporu'
+          NO=$(gh issue list --state open --limit 100 --json number,title --jq ".[] | select(.title == \"$BASLIK\") | .number" | head -n 1)
+          if [ -z "$NO" ]; then
+            # Konuyu açan bildirimde sahibin adı geçtiği için sonraki her yorum da ona bildirim olarak gider
+            NO=$(gh issue create --title "$BASLIK" --body "@$SAHIP Filoist her gün kaynakları tarar ve sonucu bu konuya yorum olarak yazar. Bu konuyu kapatma; kapanırsa yeni bir konu açılır." | grep -o '[0-9]*$')
+          fi
+          gh issue comment "$NO" --body-file "$RAPOR"

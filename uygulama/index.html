@@ -1,30 +1,8 @@
-<!doctype html>
-<html lang="tr">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Filoist</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-
-<link rel="stylesheet" href="fontlar/fontlar.css">
-<link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#14202b">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Filoist">
-<link rel="apple-touch-icon" href="simgeler/apple-touch-icon.png">
-<link rel="icon" type="image/png" href="simgeler/simge-192.png">
-<style>
-/* iPhone, 16 pikselden küçük yazılı kutulara dokununca sayfayı büyütür; bunu önlemek için */
-input, select { font-size: 16px !important; }
-</style>
-</head>
-<body>
-<script>
-if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
-</script>
-<script>window.UYGULAMA = "iphone";</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=DotGothic16&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
 /* Düzen: üstte filo özeti bandı, altında filtre paneli, ardından sıralanabilir araç tablosu (telefonda kart). */
 :root {
@@ -378,7 +356,19 @@ td.c-hat { min-width: 180px; max-width: 320px; }
     return a;
   });
 
-  document.getElementById('dataNote').textContent = `İstanbul otobüs filosu · İETT ve özel halk otobüsleri · veriler ${D.tarih}`;
+  const VERI_NOTU = `İstanbul otobüs filosu · İETT ve özel halk otobüsleri · son güncelleme ${D.tarih}`;
+  document.getElementById('dataNote').textContent = VERI_NOTU;
+  // iPhone sürümü her gün GitHub'da taranır; internet varsa son taramanın zamanı da gösterilir
+  if (window.UYGULAMA === 'iphone') {
+    fetch('durum.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(d => {
+      if (!d || !d.sonKontrol) return;
+      const t = new Date(d.sonKontrol), bugun = new Date(), dun = new Date(Date.now() - 864e5);
+      const ayni = (a, b) => a.toDateString() === b.toDateString();
+      const saat = t.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+      const gun = ayni(t, bugun) ? 'bugün' : ayni(t, dun) ? 'dün' : t.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
+      document.getElementById('dataNote').textContent = `${VERI_NOTU} · son kontrol ${gun} ${saat}`;
+    }).catch(() => {});
+  }
   // Ortalama yaş, verinin alındığı yıla göre
   const VERI_YILI = Number((D.tarih.match(/\d{4}/) || [new Date().getFullYear()])[0]);
 
@@ -751,5 +741,3 @@ td.c-hat { min-width: 180px; max-width: 320px; }
   if (UYGULAMA === 'masaustu' && A.odak) $('q').focus();
 })();
 </script>
-</body>
-</html>
