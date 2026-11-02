@@ -9,7 +9,7 @@ import os, shutil, subprocess, sys
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 YAYIN = os.path.join(KOK, 'iphone', 'yayin')
 DEPO = 'https://github.com/bagcifahri/filoist.git'
-VERI_DOSYALARI = ['veri/filo.json', 'veri/durum.json', 'uygulama/filo.js']
+VERI_DOSYALARI = ['veri/filo.json', 'veri/durum.json', 'veri/iett_canli.json', 'uygulama/filo.js']
 
 
 def git(*args):

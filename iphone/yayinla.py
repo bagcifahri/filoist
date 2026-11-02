@@ -6,6 +6,7 @@ GitHub deposu (bagcifahri/filoist) sitenin kaynağıdır. Depodaki iş akışı 
 
 Adımlar:
 1. GitHub'daki güncel veri bilgisayara alınır (scripts/veri_esitle.py); veri hep depodan gelir.
+   İETT canlı listesi burada tazelenir: İBB sunucusu GitHub'dan erişime kapalı, bilgisayardan açık.
 2. iphone/pwa_hazirla.py ile site bilgisayarda da üretilir (hata varsa yükleme yapılmaz).
 3. Kaynak dosyalar iphone/yayin/ (deponun yerel kopyası) klasörüne aktarılır, değişiklik varsa gönderilir.
 
@@ -17,12 +18,12 @@ BURA = os.path.dirname(os.path.abspath(__file__))
 KOK = os.path.dirname(BURA)
 YAYIN = os.path.join(BURA, 'yayin')
 sys.path.insert(0, os.path.join(KOK, 'scripts'))
-import veri_esitle  # noqa: E402
+import guncelle, veri_esitle  # noqa: E402
 
 # Depoya giden dosyalar (proje köküne göre); klasörler tümüyle kopyalanır
 KAYNAKLAR = [
     '.github/workflows/filoist.yml', '.gitignore',
-    'uygulama/index.html', 'uygulama/filo.js', 'veri/filo.json', 'veri/durum.json',
+    'uygulama/index.html', 'uygulama/filo.js', 'veri/filo.json', 'veri/durum.json', 'veri/iett_canli.json',
     'scripts/guncelle.py', 'scripts/birlestir.py', 'scripts/uygulama_verisi.py', 'scripts/veri_esitle.py',
     'masaustu/sayfa_hazirla.py', 'masaustu/fontlar',
     'iphone/pwa_hazirla.py', 'iphone/simge_ciz.py', 'iphone/yayinla.py',
@@ -37,6 +38,7 @@ def git(*args, yakala=False):
 def main():
     sys.stdout.reconfigure(encoding='utf-8')
     veri_esitle.esitle()
+    guncelle.iett_tazele()
     subprocess.run([sys.executable, os.path.join(BURA, 'pwa_hazirla.py')], check=True)
 
     # Yerel kopya, KAYNAKLAR listesiyle birebir aynı olsun (.git hariç)
