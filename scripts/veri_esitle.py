@@ -9,7 +9,7 @@ import os, shutil, subprocess, sys
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 YAYIN = os.path.join(KOK, 'iphone', 'yayin')
 DEPO = 'https://github.com/bagcifahri/filoist.git'
-VERI_DOSYALARI = ['veri/filo.json', 'veri/durum.json', 'veri/iett_canli.json', 'veri/busphoto.json', 'uygulama/filo.js']
+VERI_DOSYALARI = ['veri/filo.json', 'veri/durum.json', 'veri/iett_canli.json', 'veri/busphoto.json']
 
 
 def git(*args):
@@ -37,6 +37,15 @@ def esitle():
             shutil.copyfile(kaynak, hedef)
             yeni += 1
     print(f'GitHub verisi alındı ({yeni} dosya güncellendi)' if yeni else 'Veri zaten güncel')
+    uygulama_verisini_uret()
+
+
+def uygulama_verisini_uret():
+    """Uygulamanın veri dosyası (uygulama/filo.js) indirilmez, buradan üretilir: böylece bilgisayardaki
+    teknik özellikler (veri/teknik.json) GitHub'daki eski bir filo.js ile ezilmez."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import uygulama_verisi
+    uygulama_verisi.yaz()
 
 
 def main():
@@ -45,6 +54,8 @@ def main():
         esitle()
     except Exception as e:
         print('UYARI: GitHub\'daki güncel veri alınamadı, bilgisayardaki veri kullanılacak.', e)
+        # İnternet yokken de teknik özelliklerdeki değişiklikler derlemeye girsin
+        uygulama_verisini_uret()
         return 1 if '--zorunlu' in sys.argv else 0
     return 0
 

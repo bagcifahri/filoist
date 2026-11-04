@@ -177,6 +177,11 @@ td.c-hat { min-width: 180px; max-width: 320px; }
 .kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .note { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 13.5px; color: var(--muted); }
 .note b { color: var(--ink); }
+.tech { display: grid; gap: 10px; padding-top: 16px; border-top: 1px solid var(--line); }
+.tech h3 { font-family: var(--display); font-size: 19px; margin: 0; letter-spacing: 0.02em; }
+.tech .note, .tech-src { margin: 0; }
+.tech-src { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.tech-src a { color: inherit; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .actions button { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 7px 12px; cursor: pointer; font-size: 13.5px; font-weight: 500; }
 .actions button:hover { border-color: var(--accent); color: var(--accent); }
@@ -628,6 +633,24 @@ td.c-hat { min-width: 180px; max-width: 320px; }
     ilk.focus({ preventScroll: true });
   }
 
+  // Teknik özellikler model başına tutulur (veri/teknik.json); anahtar "Marka|Model"
+  const TEKNIK = (D.teknik && D.teknik.modeller) || {};
+  const TEKNIK_KAYNAK = (D.teknik && D.teknik.kaynaklar) || {};
+  const TEKNIK_ALANLAR = [['tip', 'Araç tipi'], ['uzunluk', 'Uzunluk'], ['genislik', 'Genişlik'], ['yukseklik', 'Yükseklik'],
+    ['motor', 'Motor'], ['guc', 'Güç'], ['tork', 'Tork'], ['emisyon', 'Emisyon'], ['yakit', 'Yakıt'], ['batarya', 'Batarya'],
+    ['menzil', 'Menzil'], ['sanziman', 'Şanzıman'], ['kapasite', 'Kapasite'], ['kapi', 'Kapı'], ['aks', 'Aks'], ['taban', 'Taban']];
+  function teknikHtml(a) {
+    if (!a.model) return '';
+    const t = TEKNIK[a.marka + '|' + a.model];
+    if (!t) return '<section class="tech"><h3>Teknik özellikler</h3><p class="note">Bu model için teknik bilgi henüz eklenmedi.</p></section>';
+    const satirlar = TEKNIK_ALANLAR.filter(([k]) => t[k]).map(([k, ad]) => `<dt>${ad}</dt><dd>${esc(t[k])}</dd>`).join('');
+    const kaynaklar = (t.kaynak || []).map(k => TEKNIK_KAYNAK[k]).filter(Boolean)
+      .map(k => `<a href="${esc(k.url)}" target="_blank" rel="noopener">${esc(k.ad)}</a>`).join(' · ');
+    return `<section class="tech"><h3>Teknik özellikler</h3>
+      ${satirlar ? `<dl class="kv">${satirlar}</dl>` : ''}${t.not ? `<p class="note">${esc(t.not)}</p>` : ''}
+      <p class="tech-src">Modelin genel değerleridir; aracın kendi donanımı farklı olabilir.${kaynaklar ? ` Kaynak: ${kaynaklar}` : ''}</p></section>`;
+  }
+
   // Detay paneli
   let lastFocus = null;
   function openDetail(a) {
@@ -658,6 +681,7 @@ td.c-hat { min-width: 180px; max-width: 320px; }
         <h2 id="dTitle">${esc([a.marka, a.model].filter(Boolean).join(' ') || 'Model bilinmiyor')}<small>${a.yil ? esc(a.yil) + ' model · ' : ''}${esc(a.operator)}</small></h2>
         <dl class="kv">${kv.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
         ${stateNote}${note}
+        ${teknikHtml(a)}
         <div class="actions">${acts}</div>
       </div>`;
     $('detail').hidden = false; $('scrim').hidden = false;

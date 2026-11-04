@@ -1,6 +1,7 @@
 """veri/filo.json dosyasını uygulamanın yüklediği sıkıştırılmış uygulama/filo.js dosyasına çevirir.
 
 Uygulamada gösterilen "son güncelleme" tarihi veri/durum.json içindeki veriGuncelleme alanından alınır.
+Model başına teknik özellikler veri/teknik.json dosyasından eklenir.
 """
 import datetime, json, os
 
@@ -22,6 +23,11 @@ def yaz():
     iso = json.load(open(durum_yolu, encoding='utf-8'))['veriGuncelleme'] if os.path.exists(durum_yolu) else '2026-11-01'
     satirlar = [[' '.join(a[k]) if k == 'hatlar' else a[k] for k in ALANLAR] for a in araclar]
     veri = {'alanlar': ALANLAR, 'satirlar': satirlar, 'tarih': tarih_yazi(iso)}
+    # Model başına teknik özellikler; detay panelinde gösterilir
+    teknik_yolu = os.path.join(KOK, 'veri', 'teknik.json')
+    if os.path.exists(teknik_yolu):
+        teknik = json.load(open(teknik_yolu, encoding='utf-8'))
+        veri['teknik'] = {'modeller': teknik['modeller'], 'kaynaklar': teknik['kaynaklar']}
 
     os.makedirs(os.path.join(KOK, 'uygulama'), exist_ok=True)
     with open(os.path.join(KOK, 'uygulama', 'filo.js'), 'w', encoding='utf-8', newline='\n') as f:

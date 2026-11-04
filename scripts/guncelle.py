@@ -307,6 +307,12 @@ def tara(simdi, eski, durum, rapor):
     if yedekten:
         rapor += ['ℹ️ GitHub’dan ulaşılamadığı için son kayıt kullanıldı: ' + ', '.join(yedekten)
                   + '. Bu kayıtlar bilgisayardan yayın yapınca tazelenir.', '']
+    # Yeni bir model çıktıysa teknik özelliklerinin eklenmesi gerekir (veri/teknik.json)
+    teknik = yukle(os.path.join(KOK, 'veri', 'teknik.json'), {}).get('modeller', {})
+    eksik = collections.Counter(f'{a["marka"]} {a["model"]}' for a in yeni
+                                if a['model'] and f'{a["marka"]}|{a["model"]}' not in teknik)
+    if teknik and eksik:
+        rapor += liste('Teknik özelliği eklenmemiş modeller', [f'{m} ({n} araç)' for m, n in eksik.most_common()])
     rapor += [f'Toplam: {sayi(len(yeni))} araç (ÖHO {sayi(s_yeni["ÖHO"])}, İETT {sayi(s_yeni["İETT"])})']
     rapor_yaz(rapor)
     print('\n'.join(rapor))

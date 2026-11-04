@@ -1,0 +1,451 @@
+{
+  "_aciklama": "Model başına teknik özellikler. Anahtar: 'Marka|Model' (veri/filo.json'daki yazımla aynı). Değerler modelin genel değerleridir; aracın kendi donanımı farklı olabilir. Bulunamayan alan yazılmaz. Kaynak kısaltmaları dosyanın sonundaki 'kaynaklar' bölümünde.",
+  "modeller": {
+    "Otokar|Kent 290LF": {
+      "tip": "12 m solo şehir içi otobüs",
+      "uzunluk": "12.000 mm", "genislik": "2.540 mm",
+      "motor": "Deutz TCD 2013 L06 4V, 6 silindir, 7,1 L", "guc": "285 BG (≈210 kW)", "emisyon": "EEV", "yakit": "Dizel",
+      "sanziman": "Voith DIWA D864.5, 4 ileri otomatik", "taban": "Alçak taban",
+      "not": "2015 üretimi araçlarda Euro 6 Cummins ISB 6.7 (204 kW) motor olabilir.",
+      "kaynak": ["dh", "wtr_kent", "busplaner"]
+    },
+    "Otokar|Kent LF": {
+      "tip": "12 m solo şehir içi otobüs",
+      "uzunluk": "12.000 mm", "genislik": "2.540 mm",
+      "motor": "Cummins, 6 silindir", "guc": "220 kW @ 2100 d/d", "tork": "1.182 Nm @ 1150–1400 d/d", "emisyon": "Euro 6", "yakit": "Dizel",
+      "sanziman": "Voith D864.6 4 ileri ya da ZF 6AP1200 6 ileri otomatik", "kapasite": "En çok 102 yolcu", "kapi": "3", "taban": "Tam alçak taban",
+      "not": "2015'e kadar üretilenlerde Deutz motor kullanıldı.",
+      "kaynak": ["otk23", "wtr_kent"]
+    },
+    "Otokar|Kent LF II": {
+      "tip": "10,8–12 m solo şehir içi otobüs (yeni nesil)",
+      "motor": "Cummins, 6 silindir", "guc": "220 kW @ 2100 d/d", "tork": "1.182 Nm @ 1150–1400 d/d", "yakit": "Dizel",
+      "kapasite": "En çok 102 yolcu", "taban": "Tam alçak taban",
+      "not": "Değerler Otokar'ın 2026 broşüründeki Kent LF'ye aittir.",
+      "kaynak": ["otk26"]
+    },
+    "Otokar|Kent C 12": {
+      "tip": "12 m solo şehir içi otobüs",
+      "uzunluk": "12.000 mm", "genislik": "2.540 mm",
+      "motor": "Cummins, 6 silindir", "guc": "220 kW @ 2100 d/d", "tork": "1.182 Nm @ 1150–1400 d/d", "emisyon": "Euro 6", "yakit": "Dizel",
+      "kapasite": "En çok 102 yolcu", "taban": "Tam alçak taban",
+      "not": "Kent C, Kent LF'nin dış pazardaki adı; değerler Otokar'ın 2023 broşüründeki Kent LF'ye aittir.",
+      "kaynak": ["otk23", "wtr_kent"]
+    },
+    "Otokar|Kent XL": {
+      "tip": "21 m körüklü metrobüs",
+      "uzunluk": "20.995 mm", "genislik": "2.540 mm",
+      "motor": "DAF", "guc": "270 kW @ 1600 d/d", "tork": "1.900 Nm @ 900–1125 d/d", "emisyon": "Euro 6", "yakit": "Dizel",
+      "kapasite": "220 yolcu (38 oturan)", "kapi": "4", "aks": "4", "taban": "Alçak taban",
+      "not": "Yalnızca İstanbul metrobüs hattı için üretildi.",
+      "kaynak": ["otk23", "wtr_kent", "metrobus"]
+    },
+    "Otokar|Sultan LF": {
+      "tip": "8,4 m midibüs",
+      "uzunluk": "8.400 mm",
+      "motor": "Cummins", "guc": "107 kW @ 2300 d/d", "tork": "632 Nm @ 1300 d/d", "emisyon": "Euro 6", "yakit": "Dizel",
+      "kapasite": "En çok 63 yolcu", "taban": "Alçak taban girişli",
+      "kaynak": ["otk23"]
+    },
+    "Otokar|Doruk 220 LE": {
+      "tip": "10 m şehir içi otobüs",
+      "uzunluk": "10.000 mm",
+      "motor": "Cummins", "guc": "151 kW @ 2300 d/d", "tork": "832 Nm @ 1200–1450 d/d", "emisyon": "Euro 6", "yakit": "Dizel",
+      "kapasite": "En çok 87 yolcu", "taban": "Alçak taban girişli",
+      "kaynak": ["otk23"]
+    },
+    "Otokar|Territo U": {
+      "tip": "12,2–13 m şehirler arası / banliyö otobüsü",
+      "motor": "Cummins", "guc": "233 kW @ 2300 d/d", "tork": "1.182 Nm @ 1150–1400 d/d", "yakit": "Dizel",
+      "kapasite": "En çok 74 yolcu (oturan ve ayakta)",
+      "kaynak": ["otk26"]
+    },
+    "Otokar|Sultan Maxi City": {
+      "tip": "Midibüs",
+      "not": "Bu model için güvenilir teknik bilgi bulunamadı."
+    },
+    "Mercedes-Benz|O530 Citaro": {
+      "tip": "12 m solo şehir içi otobüs",
+      "uzunluk": "12.135 mm", "genislik": "2.550 mm", "yukseklik": "3.130 mm",
+      "motor": "Mercedes-Benz OM 906 hLA, 6 silindir, 6,4 L", "guc": "205–210 kW (≈280–285 BG)", "emisyon": "Euro 3 / Euro 4", "yakit": "Dizel",
+      "sanziman": "ZF Ecomat, 6 ileri otomatik", "taban": "Alçak taban",
+      "not": "Motor, 2005–2006 üretimi 12 m Citaro'ların genel değeridir; İETT araçları için resmî kaynakla doğrulanamadı.",
+      "kaynak": ["citaro_wiki", "traditionsbus", "dh"]
+    },
+    "Mercedes-Benz|O530 Citaro G": {
+      "tip": "18 m körüklü şehir içi otobüs",
+      "uzunluk": "17.940 mm", "genislik": "2.550 mm", "yukseklik": "3.130 mm",
+      "motor": "Mercedes-Benz OM 457 hLA, 6 silindir, 12 L", "guc": "260 kW (354 BG)", "emisyon": "Euro 4", "yakit": "Dizel",
+      "sanziman": "ZF Ecomat, 6 ileri otomatik", "taban": "Alçak taban", "aks": "3",
+      "not": "Motor, aynı dönemin Citaro G'lerinin genel değeridir; İETT araçları için resmî kaynakla doğrulanamadı.",
+      "kaynak": ["citaro_wiki", "dh"]
+    },
+    "Mercedes-Benz|O530 Citaro Facelift CapaCity GL": {
+      "tip": "19,5 m körüklü metrobüs (CapaCity)",
+      "uzunluk": "19.540 mm", "genislik": "2.550 mm",
+      "motor": "Mercedes-Benz OM 457 hLA, 6 silindir, 12 L", "guc": "349 BG (≈260 kW)", "yakit": "Dizel",
+      "sanziman": "ZF 6HP602, 6 ileri otomatik", "kapasite": "193 yolcu (42 oturan)", "aks": "4 (en arka aks aktif yönlendirmeli)", "taban": "Alçak taban",
+      "kaynak": ["metrobus", "dh", "citaro_wiki"]
+    },
+    "Mercedes-Benz|Conecto II G": {
+      "tip": "18 m körüklü şehir içi otobüs",
+      "uzunluk": "≈18.000 mm", "genislik": "2.550 mm",
+      "motor": "Mercedes-Benz OM 457 LA, 6 silindir, 12 L", "guc": "349 BG (≈260 kW)", "yakit": "Dizel",
+      "sanziman": "Voith DIWA 864.5 ya da ZF Ecomat 2 Plus 6HP602C, otomatik", "kapasite": "149 yolcu (42 oturan)", "aks": "3", "taban": "Alçak taban",
+      "not": "Motor bilgisi 2012 teslimatına aittir; 2015 teslimatlarında farklı olabilir.",
+      "kaynak": ["dh", "metrobus"]
+    },
+    "Mercedes-Benz|Conecto": {
+      "tip": "12 m solo şehir içi otobüs",
+      "motor": "Mercedes-Benz OM 926 LA, 6 silindir, 7,2 L", "guc": "282 BG (≈210 kW)", "emisyon": "Euro 4 / Euro 5", "yakit": "Dizel",
+      "sanziman": "Voith DIWA 864.5 ya da ZF Ecomat 2 Plus, otomatik", "taban": "Alçak taban",
+      "kaynak": ["dh"]
+    },
+    "Mercedes-Benz|New Conecto": {
+      "tip": "12 m solo şehir içi otobüs",
+      "uzunluk": "12.130 mm", "genislik": "2.550 mm",
+      "motor": "Mercedes-Benz OM 936, 6 silindir, 7,7 L", "guc": "220 kW (299 BG)", "tork": "1.200 Nm", "emisyon": "Euro 6", "yakit": "Dizel",
+      "taban": "Alçak taban",
+      "kaynak": ["mb_conecto"]
+    },
+    "Mercedes-Benz|New Conecto Hybrid": {
+      "tip": "12 m solo şehir içi otobüs, hafif hibrit",
+      "uzunluk": "12.130 mm", "genislik": "2.550 mm",
+      "motor": "Mercedes-Benz OM 936, 6 silindir, 7,7 L + 48 V hibrit modül", "guc": "220 kW (299 BG)", "tork": "1.200 Nm", "emisyon": "Euro 6", "yakit": "Dizel (hafif hibrit)",
+      "taban": "Alçak taban",
+      "not": "Üreticiye göre hibrit modül yakıtta %6,5'e kadar tasarruf sağlıyor.",
+      "kaynak": ["mb_conecto"]
+    },
+    "Mercedes-Benz|New Conecto NGT": {
+      "tip": "12 m solo şehir içi otobüs, doğal gazlı",
+      "yakit": "Doğal gaz (CNG)", "taban": "Alçak taban",
+      "not": "Motor ve kapasite bilgisi bulunamadı."
+    },
+    "Mercedes-Benz|Tourismo I": {
+      "tip": "Şehirler arası / tur otobüsü",
+      "not": "Bu model için güvenilir teknik bilgi bulunamadı."
+    },
+    "Mercedes-Benz|Tourismo II": {
+      "tip": "Şehirler arası / tur otobüsü",
+      "not": "Bu model için güvenilir teknik bilgi bulunamadı."
+    },
+    "Mercedes-Benz|Travego": {
+      "tip": "Şehirler arası / tur otobüsü",
+      "not": "Bu model için güvenilir teknik bilgi bulunamadı."
+    },
+    "BMC|Procity": {
+      "tip": "12 m solo şehir içi otobüs",
+      "uzunluk": "12.090 mm", "genislik": "2.550 mm", "yukseklik": "3.100 mm",
+      "motor": "Cummins ISB 6.7, 6 silindir, 6,7 L", "yakit": "Dizel",
+      "sanziman": "ZF, 6 ileri otomatik", "kapasite": "103 yolcu (27 oturan + 76 ayakta)", "taban": "Alçak taban",
+      "not": "2011–2015 araçları Euro 5 Cummins ISB motorlu. Boyut ve kapasite BMC'nin güncel 12 m dizel tablosundandır.",
+      "kaynak": ["dh", "bmc"]
+    },
+    "BMC|Procity I 250 SLF": {
+      "tip": "Solo şehir içi otobüs",
+      "motor": "Cummins ISB", "yakit": "Dizel", "taban": "Alçak taban",
+      "not": "Uzunluk ve kapasite bilgisi bulunamadı.",
+      "kaynak": ["dh", "iett"]
+    },
+    "BMC|Procity II 12": {
+      "tip": "12 m solo şehir içi otobüs",
+      "uzunluk": "12.090 mm", "genislik": "2.550 mm", "yukseklik": "3.100 mm",
+      "motor": "Cummins B6.7 E6E, 6 silindir, 6,7 L", "guc": "209 kW @ 2100 d/d", "tork": "1.100 Nm @ 1000 d/d", "emisyon": "Euro 6", "yakit": "Dizel",
+      "sanziman": "ZF, 6 ileri otomatik", "kapasite": "103 yolcu (27 oturan + 76 ayakta)", "taban": "Alçak taban",
+      "not": "İETT bu araçları 'Procity TR' olarak listeliyor. Değerler BMC'nin güncel 12 m dizel tablosundandır; 2017 üretimi araçlarda küçük farklar olabilir.",
+      "kaynak": ["bmc", "iett"]
+    },
+    "BMC|Procity TR": {
+      "tip": "12 m solo şehir içi otobüs",
+      "uzunluk": "12.090 mm", "genislik": "2.550 mm", "yukseklik": "3.100 mm",
+      "motor": "Cummins B6.7 E6E, 6 silindir, 6,7 L", "guc": "209 kW @ 2100 d/d", "tork": "1.100 Nm @ 1000 d/d", "emisyon": "Euro 6", "yakit": "Dizel",
+      "sanziman": "ZF, 6 ileri otomatik", "kapasite": "103 yolcu (27 oturan + 76 ayakta)", "taban": "Alçak taban",
+      "not": "Değerler BMC'nin güncel 12 m dizel tablosundandır.",
+      "kaynak": ["bmc"]
+    },
+    "BMC|Procity TR+": {
+      "tip": "12 m solo şehir içi otobüs",
+      "uzunluk": "12.090 mm", "genislik": "2.550 mm", "yukseklik": "3.100 mm",
+      "motor": "Cummins B6.7 E6E, 6 silindir, 6,7 L", "guc": "209 kW @ 2100 d/d", "tork": "1.100 Nm @ 1000 d/d", "emisyon": "Euro 6", "yakit": "Dizel",
+      "sanziman": "ZF, 6 ileri otomatik", "kapasite": "103 yolcu (27 oturan + 76 ayakta)", "taban": "Alçak taban",
+      "not": "Değerler BMC'nin güncel 12 m dizel tablosundandır.",
+      "kaynak": ["bmc"]
+    },
+    "BMC|Procity EU": {
+      "tip": "12 m solo şehir içi otobüs",
+      "uzunluk": "12.090 mm", "genislik": "2.550 mm", "yukseklik": "3.100 mm",
+      "motor": "Cummins B6.7 E6E, 6 silindir, 6,7 L", "guc": "209 kW @ 2100 d/d", "tork": "1.100 Nm @ 1000 d/d", "emisyon": "Euro 6", "yakit": "Dizel",
+      "sanziman": "ZF, 6 ileri otomatik", "kapasite": "103 yolcu (27 oturan + 76 ayakta)", "taban": "Alçak taban",
+      "not": "Değerler BMC'nin güncel 12 m dizel tablosundandır.",
+      "kaynak": ["bmc"]
+    },
+    "BMC|Neocity": {
+      "tip": "8,5–10 m midibüs",
+      "not": "Motor ve kapasite bilgisi bulunamadı.",
+      "kaynak": ["bmc_neocity"]
+    },
+    "BMC|Belde 285CB": {
+      "tip": "Şehir içi otobüs",
+      "not": "Bu model için güvenilir teknik bilgi bulunamadı."
+    },
+    "Karsan|Avancity+ S": {
+      "tip": "18 m körüklü şehir içi otobüs (BredaMenarinibus)",
+      "motor": "MAN D2066 LUH42, 6 silindir, 10,5 L", "guc": "320 BG (≈235 kW)", "yakit": "Dizel",
+      "sanziman": "Voith DIWA 864.5, 4 ileri otomatik", "taban": "Alçak taban",
+      "not": "Bazı araçlarda ZF Ecolife 6AP1700B şanzıman kayıtlı.",
+      "kaynak": ["dh", "iett"]
+    },
+    "Karsan|Avancity+ LU CNG": {
+      "tip": "12 m solo şehir içi otobüs, doğal gazlı (BredaMenarinibus)",
+      "motor": "Mercedes-Benz OM 906 LAG", "guc": "279 BG (≈205 kW)", "yakit": "Doğal gaz (CNG)",
+      "sanziman": "ZF 6HP504 Ecomat ya da Voith DIWA 864.5, otomatik", "taban": "Alçak taban",
+      "kaynak": ["dh", "iett"]
+    },
+    "Karsan|Atak": {
+      "tip": "8 m midibüs",
+      "uzunluk": "≈8.000 mm",
+      "motor": "FPT NEF4, 4 silindir, 4,5 L", "yakit": "Dizel",
+      "kapasite": "56–58 yolcu (27'ye kadar koltuk)", "taban": "Alçak taban",
+      "not": "Kapasite ikinci nesil Atak'ın değeridir; ilk nesilde küçük farklar olabilir.",
+      "kaynak": ["karsan_atak"]
+    },
+    "Karsan|Atak II": {
+      "tip": "8 m midibüs (ikinci nesil)",
+      "uzunluk": "≈8.000 mm",
+      "motor": "FPT NEF4, 4 silindir, 4,5 L", "guc": "186 BG (137 kW)", "tork": "680 Nm", "emisyon": "Euro 6", "yakit": "Dizel",
+      "kapasite": "56–58 yolcu (27'ye kadar koltuk)", "taban": "Alçak taban",
+      "kaynak": ["karsan_atak"]
+    },
+    "Karsan|e-Jest": {
+      "tip": "6 m elektrikli minibüs",
+      "motor": "BMW kaynaklı elektrik motoru", "guc": "125–135 kW", "tork": "290 Nm", "yakit": "Elektrik",
+      "batarya": "44–88 kWh (sürüme göre)", "menzil": "En çok ≈210 km (88 kWh)", "kapasite": "22–26 yolcu (sürüme göre)",
+      "not": "Adalar'da çalışan elektrikli minibüsler bu modeldir.",
+      "kaynak": ["ejest", "iett"]
+    },
+    "Temsa|Avenue LF": {
+      "tip": "12 m solo şehir içi otobüs",
+      "uzunluk": "12.000 mm", "genislik": "2.550 mm", "yukseklik": "3.200 mm (klimalı)",
+      "motor": "Cummins ISB, 6 silindir, 6,7 L", "guc": "285 BG (≈210 kW)", "yakit": "Dizel",
+      "sanziman": "ZF Ecolife, 6 ileri otomatik", "kapasite": "25–35 koltuk (düzene göre)", "kapi": "2 ya da 3", "taban": "Alçak taban",
+      "not": "Motor gücü 2011 sonrası Euro 5 araçlara aittir; güncel Euro 6 sürümde 204 kW/1.082 Nm ya da 224 kW/1.200 Nm.",
+      "kaynak": ["dh", "temsa_lf"]
+    },
+    "Temsa|Avenue Plus LF": {
+      "tip": "12 m solo şehir içi otobüs",
+      "uzunluk": "12.000 mm", "genislik": "2.550 mm", "yukseklik": "3.200 mm (klimalı)",
+      "motor": "Cummins, 6 silindir, 6,7 L", "guc": "204 kW (280 BG) ya da 224 kW (300 BG)", "tork": "1.082 Nm ya da 1.200 Nm", "emisyon": "Euro 6", "yakit": "Dizel",
+      "sanziman": "ZF, 6 ileri otomatik", "kapasite": "25–35 koltuk (düzene göre)", "kapi": "2 ya da 3", "taban": "Alçak taban",
+      "not": "Değerler Temsa'nın güncel Avenue LF broşüründendir.",
+      "kaynak": ["temsa_lf"]
+    },
+    "Temsa|Avenue I LF 12 CNG": {
+      "tip": "12 m solo şehir içi otobüs, doğal gazlı",
+      "uzunluk": "12.000 mm",
+      "motor": "Cummins Westport ISL G, 6 silindir, 8,9 L", "guc": "300 BG (≈224 kW)", "tork": "1.167 Nm", "yakit": "Doğal gaz (CNG)",
+      "sanziman": "Allison, tam otomatik", "taban": "Alçak taban",
+      "not": "İETT'ye 2014'te teslim edildi.",
+      "kaynak": ["ngt", "iett"]
+    },
+    "Temsa|Safir Plus": {
+      "tip": "12–13 m şehirler arası otobüs",
+      "uzunluk": "12.276 mm (12 m sürüm)",
+      "motor": "DAF MX11, 10,8 L", "guc": "320 kW (seçenek: 330 kW / 449 BG)", "tork": "2.300 Nm (330 kW sürüm)", "emisyon": "Euro 6", "yakit": "Dizel",
+      "kapasite": "53 + 1 + 1 koltuk",
+      "kaynak": ["temsa_safir"]
+    },
+    "Temsa|Safir II": {
+      "tip": "Şehirler arası otobüs",
+      "not": "Bu model için güvenilir teknik bilgi bulunamadı."
+    },
+    "Temsa|MD 9 LE": {
+      "tip": "9 m alçak girişli şehir içi otobüs",
+      "kapasite": "En çok 70 yolcu (düzene göre)", "taban": "Alçak giriş",
+      "kaynak": ["temsa_md9"]
+    },
+    "Güleryüz|Cobra GD-272 LF I": {
+      "tip": "12 m solo şehir içi otobüs",
+      "uzunluk": "12.000 mm", "genislik": "2.500 mm", "yukseklik": "3.120 mm (klimalı)",
+      "motor": "MAN D0836 LOH (290 BG) ya da Cummins (300 BG)", "yakit": "Dizel",
+      "sanziman": "ZF Ecolife, 6 ileri otomatik", "kapasite": "94 yolcu (30 oturan + 64 ayakta)", "taban": "Alçak taban",
+      "not": "Boyut ve kapasite Güleryüz'ün güncel Cobra GD 272-LF / Ecoline kataloğundandır.",
+      "kaynak": ["dh", "guleryuz"]
+    },
+    "Güleryüz|Cobra GD-272 LF II": {
+      "tip": "12 m solo şehir içi otobüs",
+      "uzunluk": "12.000 mm", "genislik": "2.500 mm", "yukseklik": "3.120 mm (klimalı)",
+      "motor": "MAN D0836 LOH (290 BG), Cummins ISB 6.7 (221 kW) ya da Mercedes-Benz OM 926 LA (210 kW)", "yakit": "Dizel",
+      "sanziman": "ZF Ecolife 6AP, 6 ileri otomatik", "kapasite": "94 yolcu (30 oturan + 64 ayakta)", "taban": "Alçak taban",
+      "not": "Motor, aracın üretim yılına ve siparişe göre değişiyor. Boyut ve kapasite güncel katalogdandır.",
+      "kaynak": ["dh", "guleryuz"]
+    },
+    "Güleryüz|Cobra GD-272 LF III": {
+      "tip": "12 m solo şehir içi otobüs",
+      "uzunluk": "12.000 mm", "genislik": "2.500 mm", "yukseklik": "3.120 mm (klimalı)",
+      "motor": "Mercedes-Benz OM 936 LA (7,7 L) ya da Cummins ISB 6.7 (6,7 L)", "guc": "220–221 kW (300 BG)", "tork": "1.200 Nm (OM 936) / 1.020 Nm (Cummins)", "emisyon": "Euro 6", "yakit": "Dizel",
+      "sanziman": "ZF Ecolife 6AP, 6 ileri otomatik", "kapasite": "94 yolcu (30 oturan + 64 ayakta)", "taban": "Alçak taban",
+      "kaynak": ["guleryuz"]
+    },
+    "Güleryüz|Cobra GM-290 LF CNG": {
+      "tip": "Solo şehir içi otobüs, doğal gazlı",
+      "motor": "MAN, doğal gazlı", "guc": "300 BG (≈220 kW)", "yakit": "Doğal gaz (CNG)",
+      "sanziman": "ZF Ecolife 2, 6 ileri otomatik", "taban": "Alçak taban",
+      "not": "Bilgiler bir kullanıcı incelemesinden alınmıştır.",
+      "kaynak": ["gm290"]
+    },
+    "Güleryüz|Cobra GM-220 LE": {
+      "tip": "Alçak girişli midibüs",
+      "not": "Bu model için güvenilir teknik bilgi bulunamadı."
+    },
+    "Güleryüz|Cobra DD": {
+      "tip": "Çift katlı otobüs",
+      "not": "Bu model için güvenilir teknik bilgi bulunamadı."
+    },
+    "Akia|Ultra LF25": {
+      "tip": "25 m çift körüklü metrobüs",
+      "uzunluk": "25.000 mm", "genislik": "2.550 mm", "yukseklik": "3.400 mm",
+      "motor": "Mercedes-Benz", "emisyon": "Euro 6", "yakit": "Dizel",
+      "sanziman": "Allison, tam otomatik", "kapasite": "286 yolcu (29 oturan)", "aks": "5", "kapi": "İki yanda", "taban": "Alçak taban",
+      "not": "Motor gücü için kaynaklar farklı değerler veriyor.",
+      "kaynak": ["metrobus", "akia", "allison_lf25"]
+    },
+    "Akia|Ultra LF12": {
+      "tip": "12 m solo şehir içi otobüs",
+      "uzunluk": "12.000 mm", "yakit": "Dizel",
+      "kapasite": "98 yolcu (26 oturan + 72 ayakta)", "taban": "Alçak taban",
+      "not": "Motor bilgisi için kaynaklar farklı (Mercedes-Benz OM 936 LA ya da Cummins).",
+      "kaynak": ["akia"]
+    },
+    "Akia|Ultra LF12 I": {
+      "tip": "12 m solo şehir içi otobüs (ilk nesil)",
+      "uzunluk": "12.000 mm", "yakit": "Dizel",
+      "kapasite": "98 yolcu (26 oturan + 72 ayakta)", "taban": "Alçak taban",
+      "kaynak": ["akia"]
+    },
+    "Akia|Ultra LF12 II": {
+      "tip": "12 m solo şehir içi otobüs (ikinci nesil)",
+      "uzunluk": "12.000 mm", "yakit": "Dizel",
+      "kapasite": "98 yolcu (26 oturan + 72 ayakta)", "taban": "Alçak taban",
+      "kaynak": ["akia"]
+    },
+    "Akia|Ultra LF12 III": {
+      "tip": "12 m solo şehir içi otobüs (üçüncü nesil)",
+      "uzunluk": "12.000 mm", "yakit": "Dizel", "taban": "Alçak taban",
+      "kaynak": ["akia"]
+    },
+    "Akia|Ultra DD": {
+      "tip": "Çift katlı otobüs",
+      "motor": "Mercedes-Benz OM 936 LA, 6 silindir, 7,7 L", "guc": "220 kW", "tork": "1.200 Nm", "emisyon": "Euro 6", "yakit": "Dizel",
+      "sanziman": "Allison T3375R xFE, tam otomatik",
+      "not": "Uzunluk için kaynaklar 11 m ve 12 m diyor.",
+      "kaynak": ["allison_dd", "akia"]
+    },
+    "Isuzu|Citiport": {
+      "tip": "12 m solo şehir içi otobüs",
+      "motor": "Cummins ISB 6.7, 6 silindir, 6,7 L", "guc": "289 BG @ 2300 d/d (≈215 kW)", "tork": "1.087 Nm", "emisyon": "Euro 5", "yakit": "Dizel",
+      "sanziman": "ZF Ecolife, 6 ileri otomatik", "kapasite": "En çok 107 yolcu (27 oturan)", "kapi": "3", "taban": "Alçak taban",
+      "not": "Değerler Euro 5 sürüme aittir; Euro 6 sürümde Cummins ISB 6.7 E6 (283 BG).",
+      "kaynak": ["isuzu_cp"]
+    },
+    "Isuzu|Citiport II": {
+      "tip": "12 m solo şehir içi otobüs (yeni nesil)",
+      "motor": "Cummins B6.7, 6 silindir, 6,7 L", "guc": "300 BG @ 2100 d/d", "tork": "1.200 Nm", "emisyon": "Euro 6", "yakit": "Dizel",
+      "taban": "Alçak taban",
+      "not": "Değerler Isuzu'nun Euro 6 karşılaştırma tablosundandır; resmî teknik föy bulunamadı.",
+      "kaynak": ["isuzu_cp"]
+    },
+    "Isuzu|Novociti Life": {
+      "tip": "8 m midibüs",
+      "uzunluk": "≈8.000 mm",
+      "motor": "FPT NEF4, 4 silindir, 4,5 L (4.485 cc)", "guc": "137 kW (186 PS) @ 2500 d/d", "tork": "680 Nm @ 1250 d/d", "emisyon": "Euro 6", "yakit": "Dizel",
+      "taban": "Alçak taban",
+      "kaynak": ["isuzu_novo"]
+    },
+    "Isuzu|Novociti Life+": {
+      "tip": "8 m midibüs",
+      "not": "Teknik bilgi bulunamadı; Novociti Life'ın güncellenmiş sürümüdür."
+    },
+    "Habaş|ComfortCity": {
+      "tip": "12 m solo şehir içi otobüs",
+      "uzunluk": "12.000 mm", "genislik": "2.520 mm", "yukseklik": "3.100 mm (klimalı)",
+      "motor": "Mercedes-Benz OM 936, 7,7 L", "guc": "220 kW @ 1800 d/d", "tork": "1.200 Nm @ 1200–1600 d/d", "emisyon": "Euro 6E", "yakit": "Dizel",
+      "sanziman": "ZF Ecolife 2, 6 ileri otomatik", "kapasite": "106 yolcu (26 oturan + 80 ayakta)", "kapi": "3", "taban": "Alçak taban",
+      "kaynak": ["habas"]
+    },
+    "Tezeller|AutoBus LF1200": {
+      "tip": "12 m solo şehir içi otobüs",
+      "motor": "MAN", "yakit": "Dizel",
+      "sanziman": "ZF Ecolife, otomatik", "taban": "Alçak taban",
+      "kaynak": ["dh"]
+    },
+    "MAN|Lion's Coach I": {
+      "tip": "12 m şehirler arası otobüs",
+      "uzunluk": "12.000–12.100 mm",
+      "motor": "MAN D2066 LOH, 6 silindir, 10,5 L", "guc": "294–324 kW", "yakit": "Dizel",
+      "kapasite": "46–51 koltuk",
+      "not": "Değerler ikinci el ilanlarından derlenmiştir.",
+      "kaynak": ["man_coach"]
+    },
+    "MAN|Lion's Coach II": {
+      "tip": "12 m şehirler arası otobüs",
+      "not": "Bu model için güvenilir teknik bilgi bulunamadı."
+    },
+    "MAN|Lion's City": {
+      "tip": "12 m solo şehir içi otobüs",
+      "not": "Bu model için güvenilir teknik bilgi bulunamadı."
+    },
+    "Green Car|Shuttle 14": {
+      "tip": "Elektrikli küçük yolcu aracı (Adalar)",
+      "yakit": "Elektrik", "kapasite": "13 yolcu",
+      "not": "Adalar'da çalışan L sınıfı elektrikli araçlar.",
+      "kaynak": ["adalar", "iett"]
+    },
+    "Green Car|LSV 4": {
+      "tip": "Elektrikli küçük araç, kabinli (Adalar)",
+      "yakit": "Elektrik",
+      "kaynak": ["iett"]
+    },
+    "SGMS|Mastiff M4": {
+      "tip": "Elektrikli küçük araç",
+      "yakit": "Elektrik",
+      "not": "Teknik bilgi bulunamadı.",
+      "kaynak": ["iett"]
+    },
+    "Cleanvac|e-Micro": {
+      "tip": "Elektrikli küçük araç",
+      "yakit": "Elektrik",
+      "not": "Teknik bilgi bulunamadı.",
+      "kaynak": ["iett"]
+    }
+  },
+  "kaynaklar": {
+    "otk23": {"ad": "Otokar şehir içi otobüsler broşürü (2023)", "url": "https://commercial.otokar.com.tr/OtokarTicari/media/Otokar-Ticari/brosur/otokar-sehir-ici-otobusler-dergi-a4-2023-onizleme.pdf"},
+    "otk26": {"ad": "Otokar şehir içi araçlar broşürü (2026)", "url": "https://commercial.otokar.com.tr/OtokarTicari/media/Otokar-Ticari/brosur/sehirici-araclar-aile-brosuru-2026.pdf"},
+    "wtr_kent": {"ad": "Vikipedi: Otokar Kent", "url": "https://tr.wikipedia.org/wiki/Otokar_Kent"},
+    "busplaner": {"ad": "Busplaner: Otokar Kent C testi (10/2015)", "url": "https://www.busplaner.de/sites/default/files/public/data-fachartikel/otokar_kent_c_pdf_12935.pdf"},
+    "dh": {"ad": "DonanımHaber forumu: İETT ve İstanbul Otobüs AŞ otobüsleri", "url": "https://forum.donanimhaber.com/iett-ve-istanbul-otobus-as-otobusleri-hakkinda-bilgiler--100421445"},
+    "iett": {"ad": "İETT otobüs filosu", "url": "https://iett.istanbul/icerik/otobus-filosu"},
+    "metrobus": {"ad": "Wikipedia: Metrobus (Istanbul)", "url": "https://en.wikipedia.org/wiki/Metrobus_(Istanbul)"},
+    "citaro_wiki": {"ad": "Wikipedia: Mercedes-Benz Citaro", "url": "https://en.wikipedia.org/wiki/Mercedes-Benz_Citaro"},
+    "traditionsbus": {"ad": "Traditionsbus: O 530 Citaro teknik bilgileri", "url": "https://www.traditionsbus.de/Fahrzeuge/Technik/technik_MB_O530.htm"},
+    "mb_conecto": {"ad": "Mercedes-Benz Conecto (üretici sayfası)", "url": "https://www.mercedes-benz-bus.com/int/en/models/conecto.html"},
+    "bmc": {"ad": "BMC Procity teknik özellikler", "url": "https://bmc.com.tr/en/bus/procity/technical-specifications"},
+    "bmc_neocity": {"ad": "BMC Neocity", "url": "https://www.bmc.com.tr/en/bus/neocity"},
+    "karsan_atak": {"ad": "Karsan: ikinci nesil Atak", "url": "https://www.karsan.com/en/press/current-news/karsan-atak-raises-the-bar-further-with-its-second-generation"},
+    "ejest": {"ad": "Charged EVs: Karsan Jest Electric", "url": "https://chargedevs.com/newswire/turkish-jest-electric-city-bus-uses-bmw-i3-motors-and-batteries/"},
+    "temsa_lf": {"ad": "Temsa Avenue LF broşürü", "url": "https://www.temsa.com/tr/images/pdf/temsa-avenue-lf.pdf"},
+    "ngt": {"ad": "NGT News: İstanbul Otobüs AŞ'nin Temsa Avenue CNG otobüsleri", "url": "https://ngtnews.com/?p=9699"},
+    "temsa_safir": {"ad": "Temsa Safir Plus broşürü", "url": "https://www.temsa.com/tr/Images/pdf/Temsa_safir_plus_brosur_070824.pdf"},
+    "temsa_md9": {"ad": "Temsa MD9 LE", "url": "https://www.temsa.com/eu/en/city/md9-le"},
+    "guleryuz": {"ad": "Güleryüz Ecoline / Cobra GD 272-LF kataloğu", "url": "https://www.guleryuz.com/images/urunler/1674116867_ecoline-catalog.pdf"},
+    "gm290": {"ad": "DonanımHaber forumu: Güleryüz Cobra GM 290 LF CNG incelemesi", "url": "https://forum.donanimhaber.com/guleryuz-cobra-gm-290-lf-cng-inceleme--116501148"},
+    "akia": {"ad": "Akia Ultra model özeti", "url": "https://all-andorra.com/akia-ultra/"},
+    "allison_lf25": {"ad": "Allison: Akia metrobüsleri", "url": "https://allisontransmission.com/newsroom/article/2022/02/22/akia-metrobuses-equipped-with-allison-transmissions-alleviate-the-public-transportation-load-in-istanbul"},
+    "allison_dd": {"ad": "Allison: İstanbul'daki Akia Ultra DD otobüsleri", "url": "https://www.allisontransmission.com/newsroom/article/2022/10/11/tourists-explore-istanbul-in-comfort-with-allison-fully-automatic-transmissions"},
+    "isuzu_cp": {"ad": "Isuzu Citiport kataloğu", "url": "https://www.isuzu.com.tr/Content/assets/images/img/models/euro5/citiport.pdf"},
+    "isuzu_novo": {"ad": "Isuzu Novociti Life", "url": "https://www.isuzu.com.tr/en/bus/public-transport/novociti-life"},
+    "habas": {"ad": "Habaş ComfortCity dizel teknik föyü", "url": "https://www.habas.com.tr/Content/images/uploads/F300/HABAS-COMFORTCITY-DIESEL-DATASHEET_ENG.pdf"},
+    "man_coach": {"ad": "MAN Lion's Coach ikinci el ilanları (TruckScout24)", "url": "https://www.truckscout24.com/tsp/ts-201-68-020"},
+    "adalar": {"ad": "Medyascope: Adalar'daki elektrikli araçlar", "url": "https://medyascope.tv/2024/06/18/adalara-minibus-karari-adalilari-ayaklandirdi-iettden-ilk-aciklama-bu-araclar-sadece-turkiyede-kullanilmiyor/"}
+  }
+}
