@@ -348,13 +348,17 @@ td.c-hat { min-width: 180px; max-width: 320px; }
   const norm = s => (s || '').toLocaleLowerCase(tr).replace(/[çğıöşüâîû]/g, c => MAP[c]).replace(/-/g, '');
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+  // Hat alanında "48N Sabit" gibi adlar ve "Yandığı için Çalışmıyor" gibi açıklamalar da olabiliyor (detayda bağlantı verilmez)
+  const hatKodu = h => h.split(' ')[0];
+
   const all = D.satirlar.map(r => {
     const a = {};
     F.forEach((k, i) => { a[k] = r[i]; });
-    a.hatList = a.hatlar ? a.hatlar.split(' ') : [];
-    a.hatSet = new Set(a.hatList.map(norm));
+    a.hatList = a.hatlar ? a.hatlar.split('|') : [];
+    // "48N Sabit" gibi adlar hem tam adıyla hem hat kodu (48N) ile bulunur
+    a.hatSet = new Set(a.hatList.flatMap(h => [norm(h), norm(hatKodu(h))]));
     const p = (a.plaka || '').replace(/\s/g, ''), e = (a.eskiPlaka || '').replace(/\s/g, '');
-    a._s = ' ' + [a.kapi, a.plaka, p, a.eskiPlaka, e, a.marka, a.model, a.marka + a.model, a.operator, a.hatlar, a.garaj, a.yil].map(norm).join(' ') + ' ';
+    a._s = ' ' + [a.kapi, a.plaka, p, a.eskiPlaka, e, a.marka, a.model, a.marka + a.model, a.operator, a.hatList.join(' '), a.garaj, a.yil].map(norm).join(' ') + ' ';
     a._n = Number(a.yil) || 0;
     // Kapı no sıralaması harf + sayıya göre: A-001 ve A1001 aynı A dizisinde sayı sırasıyla yer alır
     a._k = a.kapi.replace(/-/g, '');
@@ -665,7 +669,7 @@ td.c-hat { min-width: 180px; max-width: 320px; }
       ['Model yılı', a.yil ? esc(a.yil) : '<span class="unknown">Bilinmiyor</span>'],
       ['Operatör', esc(a.operator)],
       a.filo === 'İETT' ? ['Garaj', a.garaj ? esc(a.garaj) : '<span class="unknown">—</span>'] : null,
-      a.filo === 'ÖHO' ? ['Hatlar', a.hatList.map(h => `<a href="https://iett.istanbul/RouteDetail?hkod=${encodeURIComponent(h)}" target="_blank" rel="noopener">${esc(h)}</a>`).join(', ')] : null,
+      a.filo === 'ÖHO' ? ['Hatlar', a.hatList.map(h => /\d/.test(hatKodu(h)) ? `<a href="https://iett.istanbul/RouteDetail?hkod=${encodeURIComponent(hatKodu(h))}" target="_blank" rel="noopener">${esc(h)}</a>` : esc(h)).join(', ')] : null,
       ['Durum', `<span class="state ${stateCls(a.durum)}">${esc(a.durum)}</span>`],
     ].filter(Boolean);
     const note = a.not ? `<div class="note"><b>Not:</b> ${esc(a.not)}</div>` : '';

@@ -24,7 +24,8 @@ def yaz():
     araclar = yazim.duzelt(json.load(open(os.path.join(KOK, 'veri', 'filo.json'), encoding='utf-8')))
     durum_yolu = os.path.join(KOK, 'veri', 'durum.json')
     iso = json.load(open(durum_yolu, encoding='utf-8'))['veriGuncelleme'] if os.path.exists(durum_yolu) else '2026-11-01'
-    satirlar = [[' '.join(a[k]) if k == 'hatlar' else a[k] for k in ALANLAR] for a in araclar]
+    # Hat ayracı boşluk olamaz: "48N Sabit" gibi hat adlarında boşluk var
+    satirlar = [['|'.join(a[k]) if k == 'hatlar' else a[k] for k in ALANLAR] for a in araclar]
     veri = {'alanlar': ALANLAR, 'satirlar': satirlar, 'tarih': tarih_yazi(iso)}
     # Model başına teknik özellikler; detay panelinde gösterilir
     teknik_yolu = os.path.join(KOK, 'veri', 'teknik.json')

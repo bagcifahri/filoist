@@ -49,11 +49,12 @@ MANIFEST = {
 }
 
 # Önbellek adı dosyaların özetinden üretilir: veri ya da sayfa değişince telefon yeni sürümü indirir
+# cache: 'reload': tarayıcının HTTP önbelleğindeki eski dosya yeni sürümün içine alınmasın (GitHub Pages 10 dk önbellekler)
 SW = '''const SURUM = 'filoist-%s';
 const DOSYALAR = %s;
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(SURUM).then(c => c.addAll(DOSYALAR)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(SURUM).then(c => c.addAll(DOSYALAR.map(d => new Request(d, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {

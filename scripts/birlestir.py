@@ -26,6 +26,7 @@ GARAJ = {
     'IKITELLIGARAJI': 'İkitelli', 'IKITELLIISLETTIRMEGARAJI2': 'İkitelli 2', 'SULTANGAZIGARAJI': 'Sultangazi',
     'KURTKÖY': 'Kurtköy', 'ADALAR': 'Adalar', 'TRAMVAY': 'Tramvay', 'BAŞAKŞEHİRGARAJI': 'Başakşehir',
 }
+GARAJ_ANAHTAR = {yazim.anahtar(k): v for k, v in GARAJ.items()}  # kaynak yazımı değişse de garaj bulunsun
 
 # busphoto model adı -> (marka, model)
 MARKALAR = [('Mercedes-Benz', 'Mercedes-Benz'), ('BredaMenarinibus', 'Karsan'), ('TEMSA', 'Temsa'),
@@ -34,7 +35,7 @@ MARKALAR = [('Mercedes-Benz', 'Mercedes-Benz'), ('BredaMenarinibus', 'Karsan'), 
 
 def model_ayir(s):
     for on, marka in MARKALAR:
-        if s.startswith(on):
+        if s[:len(on)].casefold() == on.casefold():
             return marka, s[len(on):].strip()
     return '', s
 
@@ -71,6 +72,12 @@ def seri_bul(kapi):
     return None
 
 
+def yil_al(s):
+    """Kaynaktaki yılı ('2013', '05.2013') dört haneli yıla çevirir; '?' gibi değerler boş sayılır."""
+    m = re.search(r'(?:19|20)\d\d$', str(s or '').strip())
+    return m.group() if m else ''
+
+
 def operator_duzelt(s):
     s = re.sub(r'\s+', ' ', (s or '').strip())
     s = re.sub(r'Tic\.\s*A\.Ş\.?$', 'Tic. A.Ş.', s)
@@ -97,7 +104,7 @@ def main():
         araclar.append({
             'filo': 'ÖHO', 'kapi': r['KapiKodu'], 'plaka': plaka_duzelt(r['Plaka']),
             'eskiPlaka': plaka_duzelt(r['exPlaka']), 'marka': r['MarkaAdi'] or '', 'model': r['ModelAdi'] or '',
-            'yil': r['Yil'] or '', 'operator': operator_duzelt(r['IsletmeAdi']), 'hatlar': hatlar,
+            'yil': yil_al(r['Yil']), 'operator': operator_duzelt(r['IsletmeAdi']), 'hatlar': hatlar,
             'garaj': '', 'durum': 'Aktif', 'kaynak': 'emreunel159', 'not': '',
         })
 
@@ -111,12 +118,12 @@ def main():
         marka = model = yil = notu = ''
         if b:
             marka, model = model_ayir(b['Model'])
-            yil = (b.get('Built') or '')[-4:]
+            yil = yil_al(b.get('Built'))
             notu = b.get('Remarks', '')
             kaynak = 'busphoto'
         elif w:
             marka, model = model_ayir(w['Model'])
-            yil = (w.get('Built') or '')[-4:]
+            yil = yil_al(w.get('Built'))
             notu = w.get('Remarks', '')
             kaynak = 'busphoto'
         elif seri_bul(kapi):
@@ -141,7 +148,7 @@ def main():
         garaj = (c or {}).get('Garaj') or ''
         araclar.append({
             'filo': 'İETT', 'kapi': kapi, 'plaka': plaka, 'eskiPlaka': '', 'marka': marka, 'model': model,
-            'yil': yil, 'operator': 'İETT', 'hatlar': [], 'garaj': GARAJ.get(garaj, garaj), 'durum': durum,
+            'yil': yil, 'operator': 'İETT', 'hatlar': [], 'garaj': GARAJ_ANAHTAR.get(yazim.anahtar(garaj), garaj), 'durum': durum,
             'kaynak': kaynak, 'not': notu,
         })
 
