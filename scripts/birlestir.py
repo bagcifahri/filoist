@@ -4,6 +4,8 @@
 """
 import json, os, re, sys, io, collections
 
+import yazim
+
 sys.stdout.reconfigure(encoding='utf-8', line_buffering=True)
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HAM = os.path.join(KOK, 'veri', 'ham')
@@ -22,7 +24,7 @@ def plaka_duzelt(p):
 
 GARAJ = {
     'IKITELLIGARAJI': 'İkitelli', 'IKITELLIISLETTIRMEGARAJI2': 'İkitelli 2', 'SULTANGAZIGARAJI': 'Sultangazi',
-    'KURTKÖY': 'Kurtköy', 'ADALAR': 'Adalar', 'TRAMVAY': 'Tramvay',
+    'KURTKÖY': 'Kurtköy', 'ADALAR': 'Adalar', 'TRAMVAY': 'Tramvay', 'BAŞAKŞEHİRGARAJI': 'Başakşehir',
 }
 
 # busphoto model adı -> (marka, model)
@@ -143,6 +145,7 @@ def main():
             'kaynak': kaynak, 'not': notu,
         })
 
+    yazim.duzelt(araclar)  # OTOKAR ve Otokar tek marka sayılsın
     json.dump(araclar, open(os.path.join(KOK, 'veri', 'filo.json'), 'w', encoding='utf-8'),
               ensure_ascii=False, separators=(',', ':'))
 

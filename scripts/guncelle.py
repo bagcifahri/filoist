@@ -23,7 +23,7 @@ FILO = os.path.join(KOK, 'veri', 'filo.json')
 DURUM = os.path.join(KOK, 'veri', 'durum.json')
 RAPOR = os.environ.get('RAPOR') or os.path.join(KOK, 'veri', 'rapor.md')
 sys.path.insert(0, BURA)
-import birlestir, uygulama_verisi  # noqa: E402
+import birlestir, uygulama_verisi, yazim  # noqa: E402
 
 ISTANBUL = datetime.timezone(datetime.timedelta(hours=3))
 BASLIKLAR = {
@@ -223,7 +223,8 @@ def basarisiz(durum, simdi, sonuc, rapor, satirlar):
 
 def main():
     simdi = datetime.datetime.now(ISTANBUL).replace(microsecond=0)
-    eski = yukle(FILO, [])
+    # Yalnızca harf büyüklüğü farkı değişiklik sayılmasın; eski kayıt da aynı kurallarla okunur
+    eski = yazim.duzelt(yukle(FILO, []))
     durum = yukle(DURUM, {'veriGuncelleme': '2026-11-01'})
     rapor = [f'### Tarama: {uygulama_verisi.tarih_yazi(simdi.isoformat())}', '']
     try:

@@ -26,6 +26,7 @@ KAYNAKLAR = [
     'uygulama/index.html', 'uygulama/filo.js', 'veri/filo.json', 'veri/durum.json', 'veri/iett_canli.json',
     'veri/busphoto.json', 'veri/teknik.json',
     'scripts/guncelle.py', 'scripts/birlestir.py', 'scripts/uygulama_verisi.py', 'scripts/veri_esitle.py',
+    'scripts/yazim.py',
     'masaustu/sayfa_hazirla.py', 'masaustu/fontlar',
     'iphone/pwa_hazirla.py', 'iphone/simge_ciz.py', 'iphone/yayinla.py',
 ]

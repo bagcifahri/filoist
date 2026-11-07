@@ -5,6 +5,8 @@ Model başına teknik özellikler veri/teknik.json dosyasından eklenir.
 """
 import datetime, json, os
 
+import yazim
+
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ALANLAR = ['filo', 'kapi', 'plaka', 'eskiPlaka', 'marka', 'model', 'yil', 'operator', 'hatlar', 'garaj', 'durum', 'kaynak', 'not']
 AYLAR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
@@ -18,7 +20,8 @@ def tarih_yazi(iso):
 
 
 def yaz():
-    araclar = json.load(open(os.path.join(KOK, 'veri', 'filo.json'), encoding='utf-8'))
+    # Depodaki veri eski yazımla kalmış olsa bile uygulamaya tek yazım gider
+    araclar = yazim.duzelt(json.load(open(os.path.join(KOK, 'veri', 'filo.json'), encoding='utf-8')))
     durum_yolu = os.path.join(KOK, 'veri', 'durum.json')
     iso = json.load(open(durum_yolu, encoding='utf-8'))['veriGuncelleme'] if os.path.exists(durum_yolu) else '2026-11-01'
     satirlar = [[' '.join(a[k]) if k == 'hatlar' else a[k] for k in ALANLAR] for a in araclar]
