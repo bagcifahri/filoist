@@ -263,6 +263,8 @@ td.c-hat { min-width: 180px; max-width: 320px; }
     <div class="filters" id="filters" data-collapsed="true">
       <div class="field"><label for="fMarka">Marka</label><select id="fMarka"></select></div>
       <div class="field"><label for="fModel">Model</label><select id="fModel"></select></div>
+      <div class="field"><label for="fSinif">Araç tipi</label><select id="fSinif"></select></div>
+      <div class="field"><label for="fYakit">Yakıt</label><select id="fYakit"></select></div>
       <div class="field years"><label for="fYilMin">Model yılı</label><div><select id="fYilMin" aria-label="En eski yıl"></select><select id="fYilMax" aria-label="En yeni yıl"></select></div></div>
       <div class="field"><label for="fOperator">Operatör</label><select id="fOperator"></select></div>
       <div class="field"><label for="fGaraj">Garaj (İETT)</label><select id="fGaraj"></select></div>
@@ -350,15 +352,21 @@ td.c-hat { min-width: 180px; max-width: 320px; }
 
   // Hat alanında "48N Sabit" gibi adlar ve "Yandığı için Çalışmıyor" gibi açıklamalar da olabiliyor (detayda bağlantı verilmez)
   const hatKodu = h => h.split(' ')[0];
+  // Teknik özellikler model başına tutulur (veri/teknik.json); anahtar "Marka|Model"
+  const TEKNIK = (D.teknik && D.teknik.modeller) || {};
+  const TEKNIK_KAYNAK = (D.teknik && D.teknik.kaynaklar) || {};
 
   const all = D.satirlar.map(r => {
     const a = {};
     F.forEach((k, i) => { a[k] = r[i]; });
+    // Araç tipi ve yakıt filtreleri modelin teknik bilgisinden gelir
+    const t = TEKNIK[a.marka + '|' + a.model] || {};
+    a.sinif = t.sinif || ''; a.yakit = t.yakit || '';
     a.hatList = a.hatlar ? a.hatlar.split('|') : [];
     // "48N Sabit" gibi adlar hem tam adıyla hem hat kodu (48N) ile bulunur
     a.hatSet = new Set(a.hatList.flatMap(h => [norm(h), norm(hatKodu(h))]));
     const p = (a.plaka || '').replace(/\s/g, ''), e = (a.eskiPlaka || '').replace(/\s/g, '');
-    a._s = ' ' + [a.kapi, a.plaka, p, a.eskiPlaka, e, a.marka, a.model, a.marka + a.model, a.operator, a.hatList.join(' '), a.garaj, a.yil].map(norm).join(' ') + ' ';
+    a._s = ' ' + [a.kapi, a.plaka, p, a.eskiPlaka, e, a.marka, a.model, a.marka + a.model, a.operator, a.hatList.join(' '), a.garaj, a.yil, a.sinif, a.yakit].map(norm).join(' ') + ' ';
     a._n = Number(a.yil) || 0;
     // Kapı no sıralaması harf + sayıya göre: A-001 ve A1001 aynı A dizisinde sayı sırasıyla yer alır
     a._k = a.kapi.replace(/-/g, '');
@@ -400,9 +408,9 @@ td.c-hat { min-width: 180px; max-width: 320px; }
   } catch (e) {}
   const saveAyar = () => { try { localStorage.setItem('filo-ayarlar', JSON.stringify(A)); } catch (e) {} };
 
-  const FILTRE_ALANLARI = ['q', 'filo', 'marka', 'model', 'yilMin', 'yilMax', 'operator', 'garaj', 'hat', 'durum'];
+  const FILTRE_ALANLARI = ['q', 'filo', 'marka', 'model', 'sinif', 'yakit', 'yilMin', 'yilMax', 'operator', 'garaj', 'hat', 'durum'];
   const SIRALAMALAR = ['kapi', 'filo', 'plaka', 'marka', 'model', 'yil', 'operator', 'yer', 'durum'];
-  const S = { q: '', filo: '', marka: '', model: '', yilMin: '', yilMax: '', operator: '', garaj: '', hat: '', durum: '', sort: 'kapi', dir: 1, page: 0, size: A.varsayilan };
+  const S = { q: '', filo: '', marka: '', model: '', sinif: '', yakit: '', yilMin: '', yilMax: '', operator: '', garaj: '', hat: '', durum: '', sort: 'kapi', dir: 1, page: 0, size: A.varsayilan };
   try {
     const kayit = JSON.parse(localStorage.getItem('filo-durum') || '{}');
     if (A.filtre) FILTRE_ALANLARI.forEach(k => { if (typeof kayit[k] === 'string') S[k] = kayit[k]; });
@@ -451,6 +459,14 @@ td.c-hat { min-width: 180px; max-width: 320px; }
     S.marka = $('fMarka').value;
     fillSelect($('fModel'), S.marka ? 'Tüm ' + S.marka + ' modelleri' : 'Tüm modeller', countBy(S.marka ? base.filter(a => a.marka === S.marka) : base, 'model'), S.model);
     S.model = $('fModel').value;
+    // Araç tipi ve yakıt listeleri birbirine göre daralır: sonuç vermeyecek seçenek görünmesin (Elektrik → Midibüs yok).
+    // Önce seçili filoda olmayan değer temizlenir; yoksa geçersiz yakıt, geçerli araç tipini de sıfırlardı
+    if (S.sinif && !base.some(a => a.sinif === S.sinif)) S.sinif = '';
+    if (S.yakit && !base.some(a => a.yakit === S.yakit)) S.yakit = '';
+    fillSelect($('fSinif'), 'Tüm araç tipleri', countBy(S.yakit ? base.filter(a => a.yakit === S.yakit) : base, 'sinif'), S.sinif);
+    fillSelect($('fYakit'), 'Tüm yakıt türleri', countBy(S.sinif ? base.filter(a => a.sinif === S.sinif) : base, 'yakit'), S.yakit);
+    S.sinif = $('fSinif').value;
+    S.yakit = $('fYakit').value;
     fillSelect($('fOperator'), 'Tüm operatörler', countBy(base, 'operator'), S.operator);
     S.operator = $('fOperator').value;
     $('fGaraj').disabled = S.filo === 'ÖHO';
@@ -468,6 +484,8 @@ td.c-hat { min-width: 180px; max-width: 320px; }
       if (S.filo && a.filo !== S.filo) return false;
       if (S.marka && a.marka !== S.marka) return false;
       if (S.model && a.model !== S.model) return false;
+      if (S.sinif && a.sinif !== S.sinif) return false;
+      if (S.yakit && a.yakit !== S.yakit) return false;
       if (S.operator && a.operator !== S.operator) return false;
       if (S.garaj && a.garaj !== S.garaj) return false;
       if (S.durum && a.durum !== S.durum) return false;
@@ -586,6 +604,8 @@ td.c-hat { min-width: 180px; max-width: 320px; }
   document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => set({ filo: b.dataset.filo })));
   $('fMarka').addEventListener('change', e => set({ marka: e.target.value, model: '' }));
   $('fModel').addEventListener('change', e => set({ model: e.target.value }));
+  $('fSinif').addEventListener('change', e => set({ sinif: e.target.value }));
+  $('fYakit').addEventListener('change', e => set({ yakit: e.target.value }));
   $('fOperator').addEventListener('change', e => set({ operator: e.target.value }));
   $('fGaraj').addEventListener('change', e => set({ garaj: e.target.value }));
   $('fDurum').addEventListener('change', e => set({ durum: e.target.value }));
@@ -593,7 +613,7 @@ td.c-hat { min-width: 180px; max-width: 320px; }
   $('fYilMin').addEventListener('change', e => { const v = e.target.value; set(S.yilMax && v && +v > +S.yilMax ? { yilMin: v, yilMax: v } : { yilMin: v }); });
   $('fYilMax').addEventListener('change', e => { const v = e.target.value; set(S.yilMin && v && +v < +S.yilMin ? { yilMin: v, yilMax: v } : { yilMax: v }); });
   $('pageSize').addEventListener('change', e => set({ size: Number(e.target.value) }));
-  $('reset').addEventListener('click', () => set({ q: '', filo: '', marka: '', model: '', yilMin: '', yilMax: '', operator: '', garaj: '', hat: '', durum: '' }));
+  $('reset').addEventListener('click', () => set({ q: '', filo: '', marka: '', model: '', sinif: '', yakit: '', yilMin: '', yilMax: '', operator: '', garaj: '', hat: '', durum: '' }));
   // İlk ya da son sayfaya gelinince basılan düğme devre dışı kalır ve odağı kaybeder; odak diğer düğmeye geçer
   $('prev').addEventListener('click', () => { set({ page: S.page - 1 }); scrollToTable(); if ($('prev').disabled) $('next').focus(); });
   $('next').addEventListener('click', () => { set({ page: S.page + 1 }); scrollToTable(); if ($('next').disabled) $('prev').focus(); });
@@ -637,9 +657,6 @@ td.c-hat { min-width: 180px; max-width: 320px; }
     ilk.focus({ preventScroll: true });
   }
 
-  // Teknik özellikler model başına tutulur (veri/teknik.json); anahtar "Marka|Model"
-  const TEKNIK = (D.teknik && D.teknik.modeller) || {};
-  const TEKNIK_KAYNAK = (D.teknik && D.teknik.kaynaklar) || {};
   const TEKNIK_ALANLAR = [['tip', 'Araç tipi'], ['uzunluk', 'Uzunluk'], ['genislik', 'Genişlik'], ['yukseklik', 'Yükseklik'],
     ['motor', 'Motor'], ['guc', 'Güç'], ['tork', 'Tork'], ['emisyon', 'Emisyon'], ['yakit', 'Yakıt'], ['batarya', 'Batarya'],
     ['menzil', 'Menzil'], ['sanziman', 'Şanzıman'], ['kapasite', 'Kapasite'], ['kapi', 'Kapı'], ['aks', 'Aks'], ['taban', 'Taban']];
@@ -701,7 +718,7 @@ td.c-hat { min-width: 180px; max-width: 320px; }
     const b = e.target.closest('[data-f]');
     if (b) {
       closeDetail(false);
-      set(Object.assign({ q: '', marka: '', model: '', operator: '', garaj: '', hat: '', durum: '', yilMin: '', yilMax: '' }, JSON.parse(b.dataset.f)));
+      set(Object.assign({ q: '', marka: '', model: '', sinif: '', yakit: '', operator: '', garaj: '', hat: '', durum: '', yilMin: '', yilMax: '' }, JSON.parse(b.dataset.f)));
       scrollToTable();
       ilkSonucaOdaklan();
     }
