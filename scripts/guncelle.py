@@ -32,8 +32,10 @@ BASLIKLAR = {
     # busphoto.eu sütun adlarını dile göre çeviriyor; birleştirme İngilizce adlara göre yazıldı
     'Accept-Language': 'en-US,en;q=0.9',
 }
-OHO_ADRES = ('https://emreunel159.com.tr/?kod=all&kapikod_search=&kapikod=&marka=&model=&yil=&sirket=&owners='
-             '&perPage=5000')
+# Site 13.11.2026'da yenilendi: araçlar artık sayfa başına 9 kartla gösteriliyor (perPage yok sayılıyor).
+# Herkese açık sayfalar sırayla okunur; sitenin kendi veri adresi (php/api.php) güvenlik anahtarı istediği için kullanılmaz.
+OHO_ADRES = 'https://emreunel159.com.tr/?kod=all&page={}'
+OHO_BEKLEME = 1  # sayfalar arasında saniye; siteyi yormamak için
 IETT_ADRES = 'https://api.ibb.gov.tr/iett/FiloDurum/SeferGerceklesme.asmx'
 BUSPHOTO_GARAJLAR = [47390, 47391, 47392, 47393, 47394, 47395, 47396, 47397, 47398, 47399, 47400, 47401, 14326]
 # Bir sayı öncekinin bu oranının altına düşerse kaynak bozuk sayılır ve yayınlanmaz
@@ -52,13 +54,50 @@ def indir(adres, veri=None, basliklar=None, deneme_sayisi=3, sure=120):
             time.sleep(10)
 
 
-def oho_indir():
-    sayfa = indir(OHO_ADRES)
-    m = re.search(r'allImages:\s*(\[.*?\]),\s*\n', sayfa, re.S)
+def _alan(kart, ad):
+    """Karttaki '<b>Ad:</b> değer' satırının düz metni."""
+    m = re.search(rf'<b>{ad}:</b>(.*?)</p>', kart, re.S)
+    return ' '.join(metin(m.group(1)).split()) if m else ''
+
+
+def oho_karti(kart):
+    m = re.search(r'aracdetails\.php\?kod=([^"&]+)"', kart)
     if not m:
+        return None
+    # Plaka satırı: "34 HO 1000 (ex. 34 NKR 840)"; satır kapanış etiketi olmadan bitebiliyor
+    p = re.search(r'<b>Plaka:</b>([^<]*)', kart)
+    plaka = ' '.join(H.unescape(p.group(1)).split()) if p else ''
+    ex = re.search(r'\(\s*ex\.?\s*([^)]*)\)', plaka, re.I)
+    if ex:
+        plaka = plaka[:ex.start()].strip()
+    # Hatların tam listesi düğmenin data-hatlar özniteliğinde. Düğme yoksa satırın düz metni okunur:
+    # hatlar " - " ile ayrılır, "Yandığı için Çalışmıyor" gibi açıklamalar bağlantısız düz metin olarak yazılır
+    d = re.search(r'data-hatlar="([^"]*)"', kart)
+    hatlar = json.loads(H.unescape(d.group(1))) if d else re.split(r'\s+-\s+', _alan(kart, r'Hat\(lar\)'))
+    return {'KapiKodu': H.unescape(m.group(1)).strip(), 'Plaka': plaka, 'exPlaka': ex.group(1).strip() if ex else '',
+            'MarkaAdi': _alan(kart, 'Marka'), 'ModelAdi': _alan(kart, 'Model'), 'Yil': _alan(kart, 'Yıl'),
+            'BolgeAdi': ' - '.join(h.strip() for h in hatlar if h and h.strip()), 'IsletmeAdi': _alan(kart, 'Operatör')}
+
+
+def oho_indir():
+    ilk = indir(OHO_ADRES.format(1))
+    sayfa_sayisi = re.search(r'Sayfa\s*\d+\s*/\s*(\d+)', ilk)
+    toplam = re.search(r'Araçlar\s*\((\d+)\)', ilk)
+    if not sayfa_sayisi or not toplam:
         raise RuntimeError('ÖHO sayfasında araç listesi bulunamadı (site yapısı değişmiş olabilir)')
-    alanlar = ['KapiKodu', 'Plaka', 'exPlaka', 'MarkaAdi', 'ModelAdi', 'Yil', 'BolgeAdi', 'IsletmeAdi']
-    return [{k: d.get(k) for k in alanlar} for d in json.loads(m.group(1))]
+    araclar = {}
+    for no in range(1, int(sayfa_sayisi.group(1)) + 1):
+        sayfa = ilk if no == 1 else indir(OHO_ADRES.format(no))
+        for kart in re.split(r'<div class="card">', sayfa)[1:]:
+            arac = oho_karti(kart)
+            if arac:
+                araclar.setdefault(arac['KapiKodu'], arac)  # okuma sırasında kayma olursa aynı araç bir kez sayılır
+        time.sleep(OHO_BEKLEME)
+    beklenen = int(toplam.group(1))
+    # Okuma sırasında araç eklenip çıkabilir; küçük fark normal, büyük fark eksik okuma demektir
+    if len(araclar) < beklenen * 0.99:
+        raise RuntimeError(f'ÖHO listesi eksik okundu: {len(araclar)} / {beklenen} araç')
+    return list(araclar.values())
 
 
 def iett_indir(deneme_sayisi=2, sure=45):
