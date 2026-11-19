@@ -41,7 +41,9 @@ jobs:
       sonuc: ${{ steps.tara.outcome }}
     defaults:
       run:
-        shell: powershell
+        # Sunucuda Windows'un betik çalıştırma izni kapalı (Restricted). Sistem ayarı değiştirilmez;
+        # izin yalnızca bu adımların PowerShell işlemi için verilir
+        shell: powershell -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
     env:
       PYTHONIOENCODING: utf-8
     steps:
