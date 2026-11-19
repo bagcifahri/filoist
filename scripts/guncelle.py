@@ -39,7 +39,9 @@ BASLIKLAR = {
 # GitHub sunucuları Cloudflare'de engelli (403); orada son kayıt (veri/oho.json) kullanılır, engel dolanılmaz.
 OHO_SITE = 'https://emreunel159.com.tr/'
 OHO_BOLUMLER = ['oho', 'oas']
-OHO_BEKLEME = 3  # sayfalar arasında saniye; site hız sınırı koyuyor (1 sn'de 429 "çok fazla istek" verdi)
+# Sayfalar arasında saniye. Site ~45 sayfada bir ~30 dk bekletiyor (429); 40 sn ile yarım saatte ~45 sayfa okunur,
+# yani sınırın altında kalınır. 342 sayfa ~4 saat sürer; tarama gece çalıştığı için süre sorun değil
+OHO_BEKLEME = 40
 OHO_SINIR_BEKLEME = 60  # 429 gelince site süre bildirmezse beklenecek saniye
 # Site sahibinin Cloudflare'de Filoist'e tanımladığı geçiş anahtarı (engel ve hız sınırından muaf tutulur).
 # GitHub'da "OHO_ANAHTAR" gizli değişkeninden, bilgisayarda oho_anahtar.txt dosyasından okunur; depoya girmez.
@@ -161,14 +163,24 @@ def oho_indir():
         if not sayfa_sayisi or not toplam:
             raise RuntimeError(f'ÖHO sitesinin "{bolum}" bölümünde araç listesi bulunamadı (site yapısı değişmiş olabilir)')
         bolumde = {}
-        for no in range(1, int(sayfa_sayisi.group(1)) + 1):
-            sayfa = ilk if no == 1 else oturum.sayfa(bolum, no)
-            onceki = len(bolumde)
+        def oku(sayfa):
             for kart in re.split(r'<div class="card">', sayfa)[1:]:
                 arac = oho_karti(kart)
                 if arac:
                     bolumde.setdefault(arac['KapiKodu'], arac)  # okuma sırasında kayma olursa aynı araç bir kez sayılır
-            # Sayfa numarası dikkate alınmıyorsa (hep aynı sayfa) hemen durulur; yüzlerce sayfa boşuna istenmesin
+
+        for no in range(1, int(sayfa_sayisi.group(1)) + 1):
+            onceki = len(bolumde)
+            oku(ilk if no == 1 else oturum.sayfa(bolum, no))
+            if no > 1 and len(bolumde) == onceki:
+                # Saatler süren okumada oturum düşerse site sayfa numarasını yok sayıp ilk sayfayı verir:
+                # oturum bir kez yenilenip aynı sayfa yeniden istenir
+                print(f'  {bolum}: {no}. sayfa yeni araç getirmedi, oturum yenileniyor')
+                time.sleep(OHO_BEKLEME)
+                oturum.yenile()
+                time.sleep(OHO_BEKLEME)
+                oku(oturum.sayfa(bolum, no))
+            # Yine olmuyorsa sayfalama gerçekten bozuk: hemen durulur, yüzlerce sayfa boşuna istenmesin
             if no > 1 and len(bolumde) == onceki:
                 raise RuntimeError(f'ÖHO sayfaları okunamıyor: "{bolum}" bölümünde {no}. sayfa yeni araç getirmedi')
             if no % 50 == 0:
