@@ -118,11 +118,15 @@ class OhoOturumu:
                     raise RuntimeError(f'{OHO_SITE} indirilemedi: {e}') from e
                 if kod == 429:
                     # Hız sınırı: sitenin istediği kadar (Retry-After) beklenir, sonra kalınan yerden devam edilir
+                    istenen = e.headers.get('Retry-After')
                     try:
-                        sure = min(int(e.headers.get('Retry-After') or OHO_SINIR_BEKLEME), 600)
+                        sure = min(int(istenen or OHO_SINIR_BEKLEME), 1800)
                     except ValueError:
                         sure = OHO_SINIR_BEKLEME
-                    print(f'  ÖHO sitesi hız sınırı: {sure} sn bekleniyor')
+                    # Sitenin istediği süre ve yanıtı kimin verdiği (Cloudflare mı, site mi) kayda yazılır
+                    print(f'  ÖHO sitesi hız sınırı: {sure} sn bekleniyor (site isteği: {istenen or "yok"}, '
+                          f'cf-ray: {"var" if e.headers.get("cf-ray") else "yok"}, '
+                          f'cloudflare sayfası: {"evet" if b"1015" in (e.read() or b"")[:5000] else "hayır"})')
                     time.sleep(sure)
                 else:
                     time.sleep(10)

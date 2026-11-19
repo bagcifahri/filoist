@@ -35,8 +35,8 @@ jobs:
   tara:
     if: github.event_name != 'push'
     runs-on: [self-hosted, windows, filoist]
-    # ÖHO sitesi hız sınırı koyuyor; sayfalar yavaş okunur (normalde ~20 dk)
-    timeout-minutes: 150
+    # ÖHO sitesi hız sınırı koyuyor: ~45 sayfada bir ~30 dk bekletiyor, 342 sayfa 3,5-4 saat sürebiliyor
+    timeout-minutes: 360
     outputs:
       sonuc: ${{ steps.tara.outcome }}
     defaults:
