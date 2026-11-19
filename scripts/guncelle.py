@@ -13,7 +13,7 @@ GitHub Actions her gün çalıştırır (.github/workflows/filoist.yml). Adımla
 
 Çıkış kodu: 0 = tarama tamamlandı (değişiklik olsun ya da olmasın), 1 = kaynak indirilemedi ya da kontrol geçmedi.
 """
-import collections, datetime, html as H, json, os, re, sys, time, urllib.request
+import collections, datetime, html as H, json, os, re, sys, time, urllib.parse, urllib.request
 
 sys.stdout.reconfigure(encoding='utf-8', line_buffering=True)
 BURA = os.path.dirname(os.path.abspath(__file__))
@@ -32,10 +32,26 @@ BASLIKLAR = {
     # busphoto.eu sütun adlarını dile göre çeviriyor; birleştirme İngilizce adlara göre yazıldı
     'Accept-Language': 'en-US,en;q=0.9',
 }
-# Site 13.11.2026'da yenilendi: araçlar artık sayfa başına 9 kartla gösteriliyor (perPage yok sayılıyor).
-# Herkese açık sayfalar sırayla okunur; sitenin kendi veri adresi (php/api.php) güvenlik anahtarı istediği için kullanılmaz.
-OHO_ADRES = 'https://emreunel159.com.tr/?kod=all&page={}'
-OHO_BEKLEME = 1  # sayfalar arasında saniye; siteyi yormamak için
+# ÖHO sitesi (emreunel159.com.tr), 16.11.2026'dan beri sayfaları yalnızca kendi sayfa geçişiyle veriyor:
+# oturum çerezi + sayfadaki güvenlik anahtarı + "X-Requested-With" başlığı. Site sahibi Emre, Filoist'in siteyi bu yolla
+# okumasına izin verdi (kullanıcı 16.11.2026'da ÖHO forumlarında görüştü). Sayfa başına en çok 9 araç verilir.
+# Site araçları bölümlere ayırıyor; bizim ÖHO filomuz sitedeki "ÖHO" + "OAŞ" bölümleridir (İETT bölümü okunmaz).
+# GitHub sunucuları Cloudflare'de engelli (403); orada son kayıt (veri/oho.json) kullanılır, engel dolanılmaz.
+OHO_SITE = 'https://emreunel159.com.tr/'
+OHO_BOLUMLER = ['oho', 'oas']
+OHO_BEKLEME = 3  # sayfalar arasında saniye; site hız sınırı koyuyor (1 sn'de 429 "çok fazla istek" verdi)
+OHO_SINIR_BEKLEME = 60  # 429 gelince site süre bildirmezse beklenecek saniye
+# Site sahibinin Cloudflare'de Filoist'e tanımladığı geçiş anahtarı (engel ve hız sınırından muaf tutulur).
+# GitHub'da "OHO_ANAHTAR" gizli değişkeninden, bilgisayarda oho_anahtar.txt dosyasından okunur; depoya girmez.
+OHO_ANAHTAR_BASLIGI = 'X-Filoist-Anahtar'
+
+
+def oho_anahtari():
+    anahtar = os.environ.get('OHO_ANAHTAR', '').strip()
+    yol = os.path.join(KOK, 'oho_anahtar.txt')
+    if not anahtar and os.path.exists(yol):
+        anahtar = open(yol, encoding='utf-8').read().strip()
+    return anahtar
 IETT_ADRES = 'https://api.ibb.gov.tr/iett/FiloDurum/SeferGerceklesme.asmx'
 BUSPHOTO_GARAJLAR = [47390, 47391, 47392, 47393, 47394, 47395, 47396, 47397, 47398, 47399, 47400, 47401, 14326]
 # Bir sayı öncekinin bu oranının altına düşerse kaynak bozuk sayılır ve yayınlanmaz
@@ -79,25 +95,88 @@ def oho_karti(kart):
             'BolgeAdi': ' - '.join(h.strip() for h in hatlar if h and h.strip()), 'IsletmeAdi': _alan(kart, 'Operatör')}
 
 
+class OhoOturumu:
+    """Sitenin kendi sayfa geçişi gibi okur: ana sayfadan oturum çerezi ve güvenlik anahtarı alınır,
+    sayfalar aynı oturumla, sitenin JavaScript'inin gönderdiği başlıklarla istenir."""
+
+    def __init__(self):
+        self.acici = urllib.request.build_opener(urllib.request.HTTPCookieProcessor())
+        self.anahtar = ''
+        self.gecis = oho_anahtari()
+        self.yenile()
+
+    def _al(self, adres, basliklar=None, deneme_sayisi=4):
+        gecis = {OHO_ANAHTAR_BASLIGI: self.gecis} if self.gecis else {}
+        istek = urllib.request.Request(adres, headers={**BASLIKLAR, **gecis, **(basliklar or {})})
+        for deneme in range(deneme_sayisi):
+            try:
+                return self.acici.open(istek, timeout=90).read().decode('utf-8')
+            except Exception as e:
+                kod = getattr(e, 'code', None)
+                # 403: oturum düşmüş olabilir (çağıran yeniler) ya da site bu bağlantıyı engelliyor
+                if deneme == deneme_sayisi - 1 or kod == 403:
+                    raise RuntimeError(f'{OHO_SITE} indirilemedi: {e}') from e
+                if kod == 429:
+                    # Hız sınırı: sitenin istediği kadar (Retry-After) beklenir, sonra kalınan yerden devam edilir
+                    try:
+                        sure = min(int(e.headers.get('Retry-After') or OHO_SINIR_BEKLEME), 600)
+                    except ValueError:
+                        sure = OHO_SINIR_BEKLEME
+                    print(f'  ÖHO sitesi hız sınırı: {sure} sn bekleniyor')
+                    time.sleep(sure)
+                else:
+                    time.sleep(10)
+
+    def yenile(self):
+        ana = self._al(OHO_SITE)
+        m = re.search(r'csrfToken:\s*"([^"]+)"', ana)
+        if not m:
+            raise RuntimeError('ÖHO sitesinde güvenlik anahtarı bulunamadı (site yapısı değişmiş olabilir)')
+        self.anahtar = m.group(1)
+
+    def sayfa(self, bolum, no):
+        adres = OHO_SITE + '?' + urllib.parse.urlencode(
+            {'kod': 'all', 'kapikod_search': '', 'seg': bolum, 'perPage': 9, 'page': no})
+        basliklar = lambda: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-Token': self.anahtar, 'Referer': OHO_SITE}
+        try:
+            return self._al(adres, basliklar())
+        except RuntimeError:
+            # Sitenin kendi kodu da 403'te sayfayı yeniler: oturum bir kez tazelenip tekrar denenir
+            time.sleep(5)
+            self.yenile()
+            return self._al(adres, basliklar())
+
+
 def oho_indir():
-    ilk = indir(OHO_ADRES.format(1))
-    sayfa_sayisi = re.search(r'Sayfa\s*\d+\s*/\s*(\d+)', ilk)
-    toplam = re.search(r'Araçlar\s*\((\d+)\)', ilk)
-    if not sayfa_sayisi or not toplam:
-        raise RuntimeError('ÖHO sayfasında araç listesi bulunamadı (site yapısı değişmiş olabilir)')
+    oturum = OhoOturumu()
     araclar = {}
-    for no in range(1, int(sayfa_sayisi.group(1)) + 1):
-        sayfa = ilk if no == 1 else indir(OHO_ADRES.format(no))
-        for kart in re.split(r'<div class="card">', sayfa)[1:]:
-            arac = oho_karti(kart)
-            if arac:
-                araclar.setdefault(arac['KapiKodu'], arac)  # okuma sırasında kayma olursa aynı araç bir kez sayılır
-        time.sleep(OHO_BEKLEME)
-    beklenen = int(toplam.group(1))
-    # Okuma sırasında araç eklenip çıkabilir; küçük fark normal, büyük fark eksik okuma demektir
-    if len(araclar) < beklenen * 0.99:
-        raise RuntimeError(f'ÖHO listesi eksik okundu: {len(araclar)} / {beklenen} araç')
-    return list(araclar.values())
+    for bolum in OHO_BOLUMLER:
+        ilk = oturum.sayfa(bolum, 1)
+        sayfa_sayisi = re.search(r'Sayfa\s*\d+\s*/\s*(\d+)', ilk)
+        toplam = re.search(r'Araçlar\s*\((\d+)\)', ilk)
+        if not sayfa_sayisi or not toplam:
+            raise RuntimeError(f'ÖHO sitesinin "{bolum}" bölümünde araç listesi bulunamadı (site yapısı değişmiş olabilir)')
+        bolumde = {}
+        for no in range(1, int(sayfa_sayisi.group(1)) + 1):
+            sayfa = ilk if no == 1 else oturum.sayfa(bolum, no)
+            onceki = len(bolumde)
+            for kart in re.split(r'<div class="card">', sayfa)[1:]:
+                arac = oho_karti(kart)
+                if arac:
+                    bolumde.setdefault(arac['KapiKodu'], arac)  # okuma sırasında kayma olursa aynı araç bir kez sayılır
+            # Sayfa numarası dikkate alınmıyorsa (hep aynı sayfa) hemen durulur; yüzlerce sayfa boşuna istenmesin
+            if no > 1 and len(bolumde) == onceki:
+                raise RuntimeError(f'ÖHO sayfaları okunamıyor: "{bolum}" bölümünde {no}. sayfa yeni araç getirmedi')
+            if no % 50 == 0:
+                print(f'  {bolum}: {no} / {sayfa_sayisi.group(1)} sayfa')
+            time.sleep(OHO_BEKLEME)
+        beklenen = int(toplam.group(1))
+        # Okuma sırasında araç eklenip çıkabilir; küçük fark normal, büyük fark eksik okuma demektir
+        if len(bolumde) < beklenen * 0.99:
+            raise RuntimeError(f'ÖHO listesi eksik okundu ("{bolum}"): {len(bolumde)} / {beklenen} araç')
+        araclar.update(bolumde)
+    # Güvence: ÖHO kapı numaralarında tire var (A-001), İETT'de yok (M4510)
+    return [a for a in araclar.values() if '-' in a['KapiKodu']]
 
 
 def iett_indir(deneme_sayisi=2, sure=45):
@@ -148,6 +227,8 @@ def busphoto_indir():
 YEDEKLI = {
     'iett': ('İETT canlı listesi', iett_indir, os.path.join(KOK, 'veri', 'iett_canli.json')),
     'busphoto': ('busphoto.eu listeleri', busphoto_indir, os.path.join(KOK, 'veri', 'busphoto.json')),
+    # 14.11.2026'dan beri ÖHO sitesi de GitHub sunucularını engelliyor (Cloudflare 403)
+    'oho': ('ÖHO listesi', oho_indir, os.path.join(KOK, 'veri', 'oho.json')),
 }
 
 
@@ -181,7 +262,11 @@ def yedekli_indir(anahtar, notlar, tazeler):
 def yedekleri_tazele():
     """Bilgisayardan yayın yapılırken çağrılır: GitHub'ın ulaşamadığı kaynakları indirip yedek kayıtları tazeler."""
     zaman = datetime.datetime.now(ISTANBUL).replace(microsecond=0)
-    for ad, islev, yol in YEDEKLI.values():
+    for anahtar, (ad, islev, yol) in YEDEKLI.items():
+        # ÖHO'yu Türkiye'deki Filoist sunucusu her gün okuyor; bilgisayardan 342 sayfa okumak siteyi
+        # yorar ve hız sınırına takılır, bu yüzden burada atlanır
+        if anahtar == 'oho':
+            continue
         try:
             kayitlar = islev()
             onceki = len(yukle(yol, {}).get('araclar', []))
@@ -282,7 +367,7 @@ def tara(simdi, eski, durum, rapor):
 
     try:
         print('ÖHO listesi indiriliyor…')
-        oho = oho_indir()
+        oho = yedekli_indir('oho', yedekten, tazeler)
         print(' ', len(oho), 'araç')
         print('İETT canlı filo listesi indiriliyor…')
         iett = yedekli_indir('iett', yedekten, tazeler)

@@ -24,7 +24,7 @@ import guncelle, veri_esitle  # noqa: E402
 KAYNAKLAR = [
     '.github/workflows/filoist.yml', '.gitignore',
     'uygulama/index.html', 'uygulama/filo.js', 'veri/filo.json', 'veri/durum.json', 'veri/iett_canli.json',
-    'veri/busphoto.json', 'veri/teknik.json',
+    'veri/busphoto.json', 'veri/oho.json', 'veri/teknik.json',
     'scripts/guncelle.py', 'scripts/birlestir.py', 'scripts/uygulama_verisi.py', 'scripts/veri_esitle.py',
     'scripts/yazim.py',
     'masaustu/sayfa_hazirla.py', 'masaustu/fontlar',

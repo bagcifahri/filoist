@@ -1,9 +1,17 @@
 # Filoist: günlük tarama ve iPhone sürümünün yayını (https://bagcifahri.github.io/filoist/)
 #
 # - Her gün 09:00'da (İstanbul) kaynaklar taranır; değişiklik varsa veri kaydedilir ve site yeniden yayınlanır.
+# - Tarama, Türkiye'deki Filoist sunucusunda (Windows, GitHub "self-hosted runner", etiketi: filoist) çalışır:
+#   İBB, busphoto.eu ve ÖHO sitesi GitHub'ın kendi sunucularını engelliyor, Türkiye'deki sunucuyu engellemiyor.
+#   Kurulum: sunucu/ klasöründeki "Filoist sunucu kurulumu.bat".
+# - Site yayını ve bildirim GitHub'ın kendi sunucularında yapılır (Windows'ta Pages adımları sorun çıkarabiliyor).
 # - Her taramanın sonucu "Günlük tarama raporu" konusuna yorum olarak yazılır; GitHub bildirim gönderir.
+#   Sunucu kapalıysa tarama yapılamaz; bu da rapor olarak bildirilir.
 # - Bilgisayardan yayinla.py ile kod gönderildiğinde (push) tarama yapılmadan yalnızca site yayınlanır.
 # - Actions sekmesindeki "Run workflow" düğmesi taramayı elle başlatır.
+#
+# Güvenlik: depo herkese açık. İş akışı pull_request ile tetiklenmez; böylece başkalarının önerdiği kod
+# sunucuda çalışamaz. Bu dosyaya pull_request tetikleyicisi EKLENMEMELİ.
 name: Filoist
 
 on:
@@ -24,16 +32,77 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  tara-ve-yayinla:
+  tara:
+    if: github.event_name != 'push'
+    runs-on: [self-hosted, windows, filoist]
+    # ÖHO sitesi hız sınırı koyuyor; sayfalar yavaş okunur (normalde ~20 dk)
+    timeout-minutes: 150
+    outputs:
+      sonuc: ${{ steps.tara.outcome }}
+    defaults:
+      run:
+        shell: powershell
+    env:
+      PYTHONIOENCODING: utf-8
+    steps:
+      # Windows'taki Git satır sonlarını değiştirmesin; veri dosyaları depodaki gibi (LF) kalsın
+      - name: Git ayarı
+        run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@v5
+
+      - name: Kaynakları tara
+        id: tara
+        env:
+          RAPOR: ${{ runner.temp }}\rapor.md
+          # ÖHO sitesinin Filoist'e tanıdığı geçiş anahtarı (Settings → Secrets and variables → Actions); yoksa boş
+          OHO_ANAHTAR: ${{ secrets.OHO_ANAHTAR }}
+        run: |
+          python scripts/guncelle.py
+          exit $LASTEXITCODE
+
+      - name: Veriyi kaydet
+        if: ${{ !cancelled() }}
+        run: |
+          git config user.name 'Filoist tarama'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add veri/filo.json veri/durum.json veri/iett_canli.json veri/busphoto.json veri/oho.json uygulama/filo.js
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) { exit 0 }
+          $zaman = [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, 'Turkey Standard Time').ToString('dd.MM.yyyy HH:mm')
+          git commit -q -m "Günlük tarama $zaman"
+          # Aynı anda bilgisayardan gönderim olduysa üstüne eklenir; çakışırsa yarım kalan birleştirme geri alınır
+          foreach ($i in 1..3) {
+            git pull -q --rebase origin main
+            if ($LASTEXITCODE -eq 0) { git push -q origin HEAD:main; if ($LASTEXITCODE -eq 0) { exit 0 } }
+            # Yönlendirme (2>$null) yazılmaz: Windows PowerShell 5.1'de git'in uyarısını hataya çevirip adımı düşürür
+            git rebase --abort
+            Start-Sleep 5
+          }
+          exit 1
+
+      - name: Raporu sakla
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapor
+          path: ${{ runner.temp }}\rapor.md
+          if-no-files-found: ignore
+          retention-days: 7
+
+  yayinla:
+    needs: tara
+    # Push'ta tarama atlanır, site yine yayınlanır; tarama başarısızsa (kaynak bozuk) yayın yapılmaz
+    if: ${{ !cancelled() && (github.event_name == 'push' || needs.tara.result == 'success') }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.yayin.outputs.page_url }}
-    env:
-      TARAMA: ${{ github.event_name != 'push' }}
-      RAPOR: ${{ github.workspace }}/../rapor.md
     steps:
+      # Taramanın az önce kaydettiği veri de gelsin diye tetikleyen commit değil, main'in son hali alınır
       - uses: actions/checkout@v5
+        with:
+          ref: main
 
       - uses: actions/setup-python@v6
         with:
@@ -42,54 +111,49 @@ jobs:
       - name: Gerekli Python paketi (simge çizimi)
         run: pip install --quiet pillow
 
-      - name: Kaynakları tara
-        id: tara
-        if: env.TARAMA == 'true'
-        run: python scripts/guncelle.py
-
-      - name: Veriyi kaydet
-        if: ${{ !cancelled() && env.TARAMA == 'true' }}
-        run: |
-          git config user.name 'Filoist tarama'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add veri/filo.json veri/durum.json veri/iett_canli.json veri/busphoto.json uygulama/filo.js
-          git diff --cached --quiet && exit 0
-          git commit -q -m "Günlük tarama $(TZ=Europe/Istanbul date '+%d.%m.%Y %H:%M')"
-          # Aynı anda bilgisayardan gönderim olduysa üstüne eklenir; çakışırsa yarım kalan birleştirme geri alınır
-          for i in 1 2 3; do
-            git pull -q --rebase origin main && git push -q origin HEAD:main && exit 0
-            git rebase --abort 2>/dev/null || true
-            sleep 5
-          done
-          exit 1
-
       - name: Siteyi hazırla
-        if: ${{ !cancelled() && steps.tara.outcome != 'failure' }}
         run: python iphone/pwa_hazirla.py
 
       - uses: actions/configure-pages@v5
-        if: ${{ !cancelled() && steps.tara.outcome != 'failure' }}
 
       - uses: actions/upload-pages-artifact@v4
-        if: ${{ !cancelled() && steps.tara.outcome != 'failure' }}
         with:
           path: iphone/site
           include-hidden-files: true
 
       - name: Yayınla
         id: yayin
-        if: ${{ !cancelled() && steps.tara.outcome != 'failure' }}
         uses: actions/deploy-pages@v4
 
+  bildir:
+    needs: [tara, yayinla]
+    # Sunucu kapalıyken tarama hiç başlamasa da (iptal/zaman aşımı) rapor gitsin
+    if: ${{ always() && github.event_name != 'push' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: rapor
+          path: rapor
+
       - name: Bildirim gönder
-        if: ${{ !cancelled() && env.TARAMA == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           SAHIP: ${{ github.repository_owner }}
           KAYIT: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          YAYIN: ${{ steps.yayin.outcome }}
+          TARAMA: ${{ needs.tara.result }}
+          YAYIN: ${{ needs.yayinla.result }}
         run: |
-          [ -f "$RAPOR" ] || printf '❌ **Tarama beklenmedik bir hatayla durdu.**\n\n' > "$RAPOR"
+          RAPOR=rapor/rapor.md
+          mkdir -p rapor
+          if [ ! -f "$RAPOR" ]; then
+            case "$TARAMA" in
+              cancelled|skipped) printf '❌ **Tarama yapılamadı:** Filoist sunucusu kapalı ya da internete bağlı değil olabilir.\n\n' > "$RAPOR" ;;
+              *) printf '❌ **Tarama beklenmedik bir hatayla durdu.**\n\n' > "$RAPOR" ;;
+            esac
+          fi
           case "$YAYIN" in
             success) echo "🌐 Site yayınlandı: https://bagcifahri.github.io/filoist/" >> "$RAPOR" ;;
             skipped) echo "🌐 Site yayınlanmadı." >> "$RAPOR" ;;
