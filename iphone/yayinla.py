@@ -11,12 +11,8 @@ Adımlar:
 3. Kaynak dosyalar iphone/yayin/ (deponun yerel kopyası) klasörüne aktarılır, değişiklik varsa gönderilir.
 
 Kimlik, bilgisayardaki Git kimlik yöneticisinden (GitHub hesabı) alınır.
-
---gece: Windows'un zamanlanmış görevi her gece böyle çalıştırır (kullanıcı 20.11.2026'da istedi; kurulum:
-"Gece tazeleme görevini kur.bat"). Çıktı gece_kaydi.txt'ye yazılır; gönderimden sonra sunucuda tarama başlatılır,
-böylece bilgisayardan tazelenen ÖHO listesi hemen işlenip onaysız yayınlanır.
 """
-import datetime, json, os, shutil, subprocess, sys, urllib.request
+import datetime, os, shutil, subprocess, sys
 
 BURA = os.path.dirname(os.path.abspath(__file__))
 KOK = os.path.dirname(BURA)
@@ -41,48 +37,17 @@ def git(*args, yakala=False):
                           capture_output=yakala).stdout
 
 
-def taramayi_baslat():
-    """Sunucuda günlük taramayı başlatır (GitHub'daki "Run workflow" düğmesiyle aynı)."""
-    kimlik = subprocess.run(['git', 'credential', 'fill'], input='protocol=https\nhost=github.com\n\n',
-                            capture_output=True, text=True, check=True).stdout
-    anahtar = next(s[9:] for s in kimlik.splitlines() if s.startswith('password='))
-    istek = urllib.request.Request(
-        'https://api.github.com/repos/bagcifahri/filoist/actions/workflows/filoist.yml/dispatches',
-        data=json.dumps({'ref': 'main'}).encode(), method='POST',
-        headers={'Authorization': 'Bearer ' + anahtar, 'Accept': 'application/vnd.github+json'})
-    urllib.request.urlopen(istek, timeout=60)
-    print('Sunucuda tarama başlatıldı: https://github.com/bagcifahri/filoist/actions')
-
-
 def main():
-    gece = '--gece' in sys.argv
-    if gece:
-        kayit = open(os.path.join(KOK, 'gece_kaydi.txt'), 'a', encoding='utf-8')
-        sys.stdout = sys.stderr = kayit
-        print('\n=== Gece tazeleme', datetime.datetime.now().strftime('%d.%m.%Y %H:%M'), '===', flush=True)
-        try:
-            calis(kayit)
-            taramayi_baslat()
-        except BaseException as e:
-            print('HATA:', repr(e))
-            raise
-        finally:
-            kayit.flush()
-        return
-    calis(None)
-
-
-def calis(kayit):
-    if kayit is None:
-        sys.stdout.reconfigure(encoding='utf-8')
+    sys.stdout.reconfigure(encoding='utf-8')
     try:
         veri_esitle.esitle()
     except Exception as e:
         # Güncel veri alınmadan gönderilirse GitHub'daki daha yeni veri eskisiyle ezilir
         sys.exit(f'GitHub\'daki güncel veri alınamadı, yayın yapılmadı: {e}')
-    guncelle.yedekleri_tazele()
-    subprocess.run([sys.executable, os.path.join(BURA, 'pwa_hazirla.py')], check=True,
-                   stdout=kayit, stderr=subprocess.STDOUT if kayit else None)
+    # --taramasiz: kaynaklara (İBB, busphoto) hiç bağlanmadan yalnızca kod gönderilir
+    if '--taramasiz' not in sys.argv:
+        guncelle.yedekleri_tazele()
+    subprocess.run([sys.executable, os.path.join(BURA, 'pwa_hazirla.py')], check=True)
 
     # Yerel kopya, KAYNAKLAR listesiyle birebir aynı olsun (.git hariç)
     for ad in os.listdir(YAYIN):
