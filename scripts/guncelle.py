@@ -1,7 +1,7 @@
 """Günlük tarama: kaynakları yeniden indirir, veriyi birleştirir, eskisiyle karşılaştırır.
 
 GitHub Actions her gün çalıştırır (.github/workflows/filoist.yml). Adımlar:
-1. ÖHO listesi (emreunel159), İETT canlı filo listesi (İBB SOAP) ve busphoto.eu garaj listeleri indirilir.
+1. ÖHO listesi (emreunel159; site hız sınırındaysa otobus34.com.tr + son kayıt), İETT canlı filo listesi (İBB SOAP) ve busphoto.eu garaj listeleri indirilir.
    İBB ve busphoto.eu, GitHub sunucularından gelen istekleri engelliyor. Bu iki kaynak için son başarılı indirme
    veri/ klasöründe saklanır (yedek kayıt) ve ulaşılamazsa o kullanılır. Yedek kayıtlar bilgisayardan yayın
    yapılırken (iphone/yayinla.py) Türkiye bağlantısıyla tazelenir.
@@ -97,6 +97,10 @@ def oho_karti(kart):
             'BolgeAdi': ' - '.join(h.strip() for h in hatlar if h and h.strip()), 'IsletmeAdi': _alan(kart, 'Operatör')}
 
 
+class HizSiniri(RuntimeError):
+    """ÖHO sitesi uzun süreli hız sınırı uyguluyor; beklemek yerine yedek yol kullanılır."""
+
+
 class OhoOturumu:
     """Sitenin kendi sayfa geçişi gibi okur: ana sayfadan oturum çerezi ve güvenlik anahtarı alınır,
     sayfalar aynı oturumla, sitenin JavaScript'inin gönderdiği başlıklarla istenir."""
@@ -119,16 +123,16 @@ class OhoOturumu:
                 if deneme == deneme_sayisi - 1 or kod == 403:
                     raise RuntimeError(f'{OHO_SITE} indirilemedi: {e}') from e
                 if kod == 429:
-                    # Hız sınırı: sitenin istediği kadar (Retry-After) beklenir, sonra kalınan yerden devam edilir
                     istenen = e.headers.get('Retry-After')
                     try:
-                        sure = min(int(istenen or OHO_SINIR_BEKLEME), 1800)
+                        sure = int(istenen or OHO_SINIR_BEKLEME)
                     except ValueError:
                         sure = OHO_SINIR_BEKLEME
-                    # Sitenin istediği süre ve yanıtı kimin verdiği (Cloudflare mı, site mi) kayda yazılır
-                    print(f'  ÖHO sitesi hız sınırı: {sure} sn bekleniyor (site isteği: {istenen or "yok"}, '
-                          f'cf-ray: {"var" if e.headers.get("cf-ray") else "yok"}, '
-                          f'cloudflare sayfası: {"evet" if b"1015" in (e.read() or b"")[:5000] else "hayır"})')
+                    # Uzun engelde beklenmez: site 20.11.2026'da bu engeli saatlerce sürdürdü ve tarama boşuna
+                    # bekledi. ÖHO listesi o zaman otobus34'ten alınır (oho_indir)
+                    if sure > OHO_SINIR_BEKLEME:
+                        raise HizSiniri(f'ÖHO sitesi hız sınırında ({istenen or "?"} sn bekleme istedi)') from e
+                    print(f'  ÖHO sitesi hız sınırı: {sure} sn bekleniyor')
                     time.sleep(sure)
                 else:
                     time.sleep(10)
@@ -146,6 +150,8 @@ class OhoOturumu:
         basliklar = lambda: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-Token': self.anahtar, 'Referer': OHO_SITE}
         try:
             return self._al(adres, basliklar())
+        except HizSiniri:
+            raise
         except RuntimeError:
             # Sitenin kendi kodu da 403'te sayfayı yeniler: oturum bir kez tazelenip tekrar denenir
             time.sleep(5)
@@ -154,6 +160,83 @@ class OhoOturumu:
 
 
 def oho_indir():
+    """ÖHO listesi: önce ÖHO sitesi (hatlar dahil tam bilgi), olmazsa otobus34 (araç listesi + son kayıt)."""
+    global OHO_KAYNAGI
+    try:
+        kayitlar = oho_sitesi_indir()
+        OHO_KAYNAGI = ''
+        return kayitlar
+    except Exception as e:
+        print(' ', e, '→ ÖHO listesi otobus34\'ten alınıyor')
+        kayitlar, yeni_sayisi = otobus34_indir()
+        OHO_KAYNAGI = (f'ÖHO sitesine ulaşılamadığı için ÖHO araç listesi ve operatörler otobus34.com.tr\'den '
+                       f'alındı ({yeni_sayisi} yeni aracın plakası ve modeli de oradan). Diğer araçların plaka, marka, '
+                       f'model ve yılı son kayıttan; '
+                       f'hatlar ÖHO sitesinin son okunan halinden.')
+        return kayitlar
+
+
+# otobus34.com.tr: İETT'nin canlı filo verisini yayınlayan site. Tek istekte tüm araçları (kapı no, plaka, operatör)
+# veriyor; marka/model ise araç başına ayrı istekle ("MARKA MODEL (YIL)", ÖHO'daki yazımla aynı). Siteyi yormamak için
+# her gece tek liste isteği yapılır, model yalnızca son kayıtta olmayan (yeni) araçlar için sorulur. Hat bilgisi yok.
+OTOBUS34 = 'https://api.otobus34.com.tr/live/'
+OTOBUS34_BASLIKLAR = {'Accept': 'application/json', 'Origin': 'https://otobus34.com.tr',
+                      'Referer': 'https://otobus34.com.tr/'}
+OTOBUS34_EN_COK_DETAY = 150  # bir gecede en çok bu kadar yeni aracın modeli sorulur (2 sn arayla)
+OHO_KAYNAGI = ''  # rapora yazılacak not (ÖHO listesi otobus34'ten geldiyse)
+
+
+def _ayni(a, b):
+    return ''.join(yazim.anahtar(a or '').replace('.', ' ').split()) == ''.join(yazim.anahtar(b or '').replace('.', ' ').split())
+
+
+def otobus34_model(kapi, markalar):
+    """Yeni aracın marka/model/yılı. markalar: bilinen marka adları (uzun olan önce denenir)."""
+    d = json.loads(indir(OTOBUS34 + 'bus-detail/' + urllib.parse.quote(kapi), basliklar=OTOBUS34_BASLIKLAR, sure=60))
+    tam = ' '.join(str(d.get('marka2') or '').split())
+    yil = re.search(r'\((\d{4})\)\s*$', tam)
+    if yil:
+        tam = tam[:yil.start()].strip()
+    marka = next((m for m in markalar if yazim.anahtar(tam).startswith(yazim.anahtar(m) + ' ')), tam.split(' ')[0] if tam else '')
+    return marka, tam[len(marka):].strip(), yil.group(1) if yil else ''
+
+
+def otobus34_indir():
+    liste = json.loads(indir(OTOBUS34 + 'all-buses', basliklar=OTOBUS34_BASLIKLAR, sure=120))
+    if not isinstance(liste, list):
+        raise RuntimeError('otobus34 araç listesi beklenen biçimde değil')
+    son = {a['KapiKodu']: a for a in yukle(YEDEKLI['oho'][2], {}).get('araclar', [])}
+    markalar = sorted({a['MarkaAdi'] for a in son.values() if a['MarkaAdi']}, key=len, reverse=True)
+    cikti, yeni_sayisi = [], 0
+    for r in liste:
+        kapi = (r.get('KapiNo') or '').strip()
+        if '-' not in kapi:  # ÖHO kapı numaralarında tire var (A-001), İETT'de yok
+            continue
+        plaka = ' '.join((r.get('Plaka') or '').split())
+        operator = ' '.join((r.get('Operator') or '').split())
+        arac = dict(son.get(kapi) or {'KapiKodu': kapi, 'Plaka': '', 'exPlaka': '', 'MarkaAdi': '', 'ModelAdi': '',
+                                      'Yil': '', 'BolgeAdi': '', 'IsletmeAdi': ''})
+        # Plaka yalnız yeni araçlar için alınır: canlı verideki plaka çoğu araçta ÖHO'nun bildiği eski plaka
+        # (ör. A-004: ÖHO 34 HO 1003, ex. 34 ZC 7661; otobus34 34 ZC 7661), bilinen aracın plakası bozulmasın
+        if plaka and not arac['Plaka']:
+            arac['Plaka'] = plaka
+        # Operatör adı iki sitede farklı yazılabiliyor (büyük harf, nokta); gerçekten değiştiyse alınır
+        if operator and not _ayni(operator, arac['IsletmeAdi']):
+            arac['IsletmeAdi'] = operator
+        # Yeni araç ya da modeli önceki gece alınamamış araç
+        if not arac['ModelAdi'] and yeni_sayisi < OTOBUS34_EN_COK_DETAY:
+            try:
+                arac['MarkaAdi'], arac['ModelAdi'], arac['Yil'] = otobus34_model(kapi, markalar)
+                yeni_sayisi += 1
+            except Exception as e:
+                print(f'  {kapi} modeli alınamadı: {e}')
+            time.sleep(2)
+        cikti.append(arac)
+    print(f'  otobus34: {len(cikti)} ÖHO aracı, {yeni_sayisi} yeni aracın modeli soruldu')
+    return cikti, yeni_sayisi
+
+
+def oho_sitesi_indir():
     oturum = OhoOturumu()
     araclar = {}
     for bolum in OHO_BOLUMLER:
@@ -445,6 +528,8 @@ def tara(simdi, eski, durum, rapor):
         durum['sonuc'] = 'Değişiklik yok'
         kaydet(DURUM, durum)
         rapor += ['☑️ **Değişiklik yok.** Kaynaklar tarandı, veriler aynı.', '']
+    if OHO_KAYNAGI:
+        rapor += ['ℹ️ ' + OHO_KAYNAGI, '']
     if yedekten:
         rapor += ['ℹ️ GitHub’dan ulaşılamadığı için son kayıt kullanıldı: ' + ', '.join(yedekten)
                   + '. Bu kayıtlar bilgisayardan yayın yapınca tazelenir.', '']

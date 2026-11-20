@@ -75,9 +75,10 @@ jobs:
           if ($LASTEXITCODE -eq 0) { exit 0 }
           $zaman = [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, 'Turkey Standard Time').ToString('dd.MM.yyyy HH:mm')
           git commit -q -m "Günlük tarama $zaman"
-          # Aynı anda bilgisayardan gönderim olduysa üstüne eklenir; çakışırsa yarım kalan birleştirme geri alınır
+          # Aynı anda bilgisayardan gönderim olduysa üstüne eklenir. Veri dosyalarında çakışma olursa taramanın
+          # yeni verisi esas alınır (-X theirs: yeniden uygulanan tarama commit'i); yine olmazsa birleştirme geri alınır
           foreach ($i in 1..3) {
-            git pull -q --rebase origin main
+            git pull -q --rebase -X theirs origin main
             if ($LASTEXITCODE -eq 0) { git push -q origin HEAD:main; if ($LASTEXITCODE -eq 0) { exit 0 } }
             # Yönlendirme (2>$null) yazılmaz: Windows PowerShell 5.1'de git'in uyarısını hataya çevirip adımı düşürür
             git rebase --abort
