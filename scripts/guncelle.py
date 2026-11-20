@@ -362,10 +362,10 @@ def yedekleri_tazele():
     """Bilgisayardan yayın yapılırken çağrılır: GitHub'ın ulaşamadığı kaynakları indirip yedek kayıtları tazeler."""
     zaman = datetime.datetime.now(ISTANBUL).replace(microsecond=0)
     for anahtar, (ad, islev, yol) in YEDEKLI.items():
-        # ÖHO'yu Türkiye'deki Filoist sunucusu her gün okuyor; bilgisayardan 342 sayfa okumak siteyi
-        # yorar ve hız sınırına takılır, bu yüzden burada atlanır
+        # ÖHO burada ÖHO sitesinden okunmaz (342 sayfa siteyi yorar, hız sınırına takılır). otobus34 sunucuyu
+        # engelliyor (403) ama bilgisayarı engellemiyor: ÖHO listesi bilgisayardan otobus34 ile tazelenir
         if anahtar == 'oho':
-            continue
+            islev = lambda: otobus34_indir()[0]
         try:
             kayitlar = islev()
             onceki = len(yukle(yol, {}).get('araclar', []))
