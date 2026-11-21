@@ -1,6 +1,7 @@
 # Filoist: günlük tarama ve iPhone sürümünün yayını (https://bagcifahri.github.io/filoist/)
 #
 # - Her gece 01:00'de (İstanbul) kaynaklar taranır; değişiklik varsa veri kaydedilir ve site yeniden yayınlanır.
+#   Son 6 saatte başarılı bir tarama yapıldıysa (ör. elle) o geceki tarama atlanır (kontrol işi).
 # - Tarama iki parçadır:
 #   1. oho: ÖHO sitesi (emreunel159.com.tr) GitHub'ın kendi sunucusunda okunur ve veri/oho.json depoya kaydedilir.
 #      Site sahibi Emre GitHub engelini kaldırdı (21.11.2026) ve sayfalar arasında 1-2 sn ara istedi; sayfa başına
@@ -39,8 +40,39 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  kontrol:
+    # Gece taraması, son 6 saatte başarılı bir tarama (ör. elle başlatılan) yapıldıysa atlanır:
+    # Emre'nin sitesi aynı gece ikinci kez boşuna okunmasın. Elle başlatılan tarama hiç atlanmaz.
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    outputs:
+      atla: ${{ steps.bak.outputs.atla }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - name: Son taramaya bak
+        id: bak
+        shell: python
+        run: |
+          import datetime, json, os
+          simdi = datetime.datetime.now(datetime.timezone.utc)
+          def yas(yol, alan):
+              try:
+                  return simdi - datetime.datetime.fromisoformat(json.load(open(yol, encoding='utf-8'))[alan])
+              except Exception:
+                  return datetime.timedelta(days=999)
+          # İkisi de taze olmalı: ÖHO listesi ve tüm kaynakların birleştirildiği son başarılı tarama
+          y = max(yas('veri/oho.json', 'tarih'), yas('veri/durum.json', 'sonKontrol'))
+          atla = y < datetime.timedelta(hours=6)
+          print(f'Son başarılı tarama {y} önce → ' + ('atlanıyor' if atla else 'tarama yapılacak'))
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'atla={"true" if atla else "false"}\n')
+
   oho:
-    if: github.event_name != 'push'
+    needs: kontrol
+    if: ${{ !cancelled() && github.event_name != 'push' && needs.kontrol.outputs.atla != 'true' }}
     runs-on: ubuntu-latest
     # Sayfalar 2-2,5 sn arayla okunur: 342 sayfa ~15-20 dk; site yavaş yanıt verirse pay kalsın diye 60 dk.
     # (Siteye giden istek sayısını süre değil, kodun istek tavanı sınırlar.)
@@ -80,9 +112,9 @@ jobs:
           exit 1
 
   tara:
-    needs: oho
+    needs: [kontrol, oho]
     # ÖHO okunamasa da tarama yapılır (ÖHO'nun son kaydıyla)
-    if: ${{ !cancelled() && github.event_name != 'push' }}
+    if: ${{ !cancelled() && github.event_name != 'push' && needs.kontrol.outputs.atla != 'true' }}
     runs-on: [self-hosted, windows, filoist]
     # Yalnız İBB ve busphoto.eu okunur (genelde birkaç dakika); ÖHO sitesine bağlanılmaz. Siteler yavaş yanıt verince
     # yeniden denemeler uzayabilir; iş kesilirse İETT verisi de kaydedilmez, o yüzden geniş pay
@@ -180,9 +212,9 @@ jobs:
         uses: actions/deploy-pages@v4
 
   bildir:
-    needs: [oho, tara, yayinla]
-    # Sunucu kapalıyken tarama hiç başlamasa da (iptal/zaman aşımı) rapor gitsin
-    if: ${{ always() && github.event_name != 'push' }}
+    needs: [kontrol, oho, tara, yayinla]
+    # Sunucu kapalıyken tarama hiç başlamasa da (iptal/zaman aşımı) rapor gitsin; bilerek atlanan gece taramasında gitmez
+    if: ${{ always() && github.event_name != 'push' && needs.kontrol.outputs.atla != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
