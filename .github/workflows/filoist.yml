@@ -1,9 +1,14 @@
 # Filoist: günlük tarama ve iPhone sürümünün yayını (https://bagcifahri.github.io/filoist/)
 #
 # - Her gece 01:00'de (İstanbul) kaynaklar taranır; değişiklik varsa veri kaydedilir ve site yeniden yayınlanır.
-# - Tarama, Türkiye'deki Filoist sunucusunda (Windows, GitHub "self-hosted runner", etiketi: filoist) çalışır:
-#   İBB, busphoto.eu ve ÖHO sitesi GitHub'ın kendi sunucularını engelliyor, Türkiye'deki sunucuyu engellemiyor.
-#   Kurulum: sunucu/ klasöründeki "Filoist sunucu kurulumu.bat".
+# - Tarama iki parçadır:
+#   1. oho: ÖHO sitesi (emreunel159.com.tr) GitHub'ın kendi sunucusunda okunur ve veri/oho.json depoya kaydedilir.
+#      Site sahibi Emre GitHub engelini kaldırdı (21.11.2026) ve sayfalar arasında 1-2 sn ara istedi; sayfa başına
+#      sunucusunda ~15 veritabanı sorgusu çalışıyor. Site yalnız bu işte, gecede bir kez okunur.
+#   2. tara: Türkiye'deki Filoist sunucusunda (Windows, GitHub "self-hosted runner", etiketi: filoist) İBB ve
+#      busphoto.eu okunur (ikisi de GitHub'ı engelliyor), ÖHO listesi depodan alınır, hepsi birleştirilir.
+#      Sunucu ÖHO sitesine bağlanmaz. Kurulum: sunucu/ klasöründeki "Filoist sunucu kurulumu.bat".
+#   ÖHO okunamazsa son kayıt kullanılır; sunucu kapalıysa ÖHO listesi yine depoya kaydedilmiş olur.
 # - Site yayını ve bildirim GitHub'ın kendi sunucularında yapılır (Windows'ta Pages adımları sorun çıkarabiliyor).
 # - Her taramanın sonucu "Günlük tarama raporu" konusuna yorum olarak yazılır; GitHub bildirim gönderir.
 #   Sunucu kapalıysa tarama yapılamaz; bu da rapor olarak bildirilir.
@@ -16,7 +21,7 @@ name: Filoist
 
 on:
   schedule:
-    # 22:00 UTC = 01:00 İstanbul. ÖHO sitesi yavaş okunduğu için (~4 saat) tarama gece yapılır, rapor sabaha gelir.
+    # 22:00 UTC = 01:00 İstanbul: ÖHO sitesinin en sakin saati. Tarama ~20-30 dk sürer.
     # (GitHub yoğunlukta başlangıcı birkaç dakika geciktirebilir)
     - cron: '0 22 * * *'
   workflow_dispatch:
@@ -34,11 +39,54 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  tara:
+  oho:
     if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    # Sayfalar 2-2,5 sn arayla okunur: 342 sayfa ~15-20 dk; site yavaş yanıt verirse pay kalsın diye 60 dk.
+    # (Siteye giden istek sayısını süre değil, kodun istek tavanı sınırlar.)
+    timeout-minutes: 60
+    outputs:
+      ozet: ${{ steps.oku.outputs.ozet }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: ÖHO sitesini oku
+        id: oku
+        env:
+          PYTHONIOENCODING: utf-8
+          # ÖHO sitesinin Filoist'e tanıdığı geçiş anahtarı (Settings → Secrets and variables → Actions); yoksa boş
+          OHO_ANAHTAR: ${{ secrets.OHO_ANAHTAR }}
+        run: python scripts/guncelle.py --yalniz-oho
+
+      - name: ÖHO listesini kaydet
+        run: |
+          git config user.name 'Filoist tarama'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add veri/oho.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -q -m "ÖHO listesi $(TZ=Europe/Istanbul date '+%d.%m.%Y %H:%M')"
+          # Aynı anda bilgisayardan gönderim olduysa üstüne eklenir; oho.json'da çakışırsa yeni okunan esas alınır
+          for i in 1 2 3; do
+            if git pull -q --rebase -X theirs origin main && git push -q origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            sleep 5
+          done
+          exit 1
+
+  tara:
+    needs: oho
+    # ÖHO okunamasa da tarama yapılır (ÖHO'nun son kaydıyla)
+    if: ${{ !cancelled() && github.event_name != 'push' }}
     runs-on: [self-hosted, windows, filoist]
-    # ÖHO sitesi hız sınırının altında kalmak için sayfalar 40 sn arayla okunur: 342 sayfa ~4 saat
-    timeout-minutes: 360
+    # Yalnız İBB ve busphoto.eu okunur (genelde birkaç dakika); ÖHO sitesine bağlanılmaz. Siteler yavaş yanıt verince
+    # yeniden denemeler uzayabilir; iş kesilirse İETT verisi de kaydedilmez, o yüzden geniş pay
+    timeout-minutes: 120
     outputs:
       sonuc: ${{ steps.tara.outcome }}
     defaults:
@@ -53,16 +101,17 @@ jobs:
       - name: Git ayarı
         run: git config --global core.autocrlf false
 
+      # Tetikleyen commit değil main'in son hali: oho işinin az önce kaydettiği ÖHO listesi de gelsin
       - uses: actions/checkout@v5
+        with:
+          ref: main
 
       - name: Kaynakları tara
         id: tara
         env:
           RAPOR: ${{ runner.temp }}\rapor.md
-          # ÖHO sitesinin Filoist'e tanıdığı geçiş anahtarı (Settings → Secrets and variables → Actions); yoksa boş
-          OHO_ANAHTAR: ${{ secrets.OHO_ANAHTAR }}
         run: |
-          python scripts/guncelle.py
+          python scripts/guncelle.py --oho-depodan
           exit $LASTEXITCODE
 
       - name: Veriyi kaydet
@@ -70,7 +119,7 @@ jobs:
         run: |
           git config user.name 'Filoist tarama'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add veri/filo.json veri/durum.json veri/iett_canli.json veri/busphoto.json veri/oho.json uygulama/filo.js
+          git add veri/filo.json veri/durum.json veri/iett_canli.json veri/busphoto.json uygulama/filo.js
           git diff --cached --quiet
           if ($LASTEXITCODE -eq 0) { exit 0 }
           $zaman = [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, 'Turkey Standard Time').ToString('dd.MM.yyyy HH:mm')
@@ -131,7 +180,7 @@ jobs:
         uses: actions/deploy-pages@v4
 
   bildir:
-    needs: [tara, yayinla]
+    needs: [oho, tara, yayinla]
     # Sunucu kapalıyken tarama hiç başlamasa da (iptal/zaman aşımı) rapor gitsin
     if: ${{ always() && github.event_name != 'push' }}
     runs-on: ubuntu-latest
@@ -149,6 +198,8 @@ jobs:
           SAHIP: ${{ github.repository_owner }}
           KAYIT: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           TARAMA: ${{ needs.tara.result }}
+          OHO_IS: ${{ needs.oho.result }}
+          OHO_OZET: ${{ needs.oho.outputs.ozet }}
           YAYIN: ${{ needs.yayinla.result }}
         run: |
           RAPOR=rapor/rapor.md
@@ -158,6 +209,14 @@ jobs:
               cancelled|skipped) printf '❌ **Tarama yapılamadı:** Filoist sunucusu kapalı ya da internete bağlı değil olabilir.\n\n' > "$RAPOR" ;;
               *) printf '❌ **Tarama beklenmedik bir hatayla durdu.**\n\n' > "$RAPOR" ;;
             esac
+          fi
+          # ÖHO işinin sonucu (GitHub'da ayrı okunur)
+          if [ -n "$OHO_OZET" ]; then
+            printf '%s\n\n' "$OHO_OZET" >> "$RAPOR"
+          fi
+          # Okuma bittiği halde liste kaydedilemediyse ya da iş beklenmedik biçimde durduysa
+          if [ "$OHO_IS" != "success" ]; then
+            printf '⚠️ ÖHO işi tamamlanamadı (%s); ÖHO için son kayıt kullanıldı.\n\n' "$OHO_IS" >> "$RAPOR"
           fi
           case "$YAYIN" in
             success) echo "🌐 Site yayınlandı: https://bagcifahri.github.io/filoist/" >> "$RAPOR" ;;
