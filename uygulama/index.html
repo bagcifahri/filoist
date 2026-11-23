@@ -102,6 +102,7 @@ button, input, select { font: inherit; color: inherit; }
 .field select:disabled { opacity: .5; }
 .reset { height: 38px; border: 1px solid var(--line); background: transparent; border-radius: 6px; padding: 0 14px; cursor: pointer; color: var(--muted); font-weight: 600; }
 .reset:hover { color: var(--ink); border-color: var(--muted); }
+.searchrow .reset { height: 44px; border-radius: 8px; background: var(--surface); }
 
 /* Sonuç özeti */
 .summary { display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: center; padding-block: 18px 12px; }
@@ -268,9 +269,11 @@ td.c-hat { min-width: 180px; max-width: 320px; }
 <div class="panel">
   <div class="wrap">
     <div class="searchrow">
+      <!-- Ekran okuyucuda başlıklarla gezerken arama kutusuna hızlı ulaşmak için görünmez başlık -->
+      <h2 class="sr"><label for="q">Ara</label></h2>
       <div class="search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
-        <input id="q" type="search" placeholder="Kapı no, plaka, model, operatör veya hat ara: M4510, 34 HO 1000, Citaro, 500T" aria-label="Ara" autocomplete="off">
+        <input id="q" type="search" placeholder="Kapı no, plaka, model, operatör veya hat ara: M4510, 34 HO 1000, Citaro, 500T" autocomplete="off">
       </div>
       <div class="seg" role="group" aria-label="Filo">
         <button type="button" data-filo="" aria-pressed="true">Tümü</button>
@@ -278,6 +281,8 @@ td.c-hat { min-width: 180px; max-width: 320px; }
         <button type="button" data-filo="ÖHO" aria-pressed="false">ÖHO</button>
       </div>
       <button type="button" class="toggle-filters" id="toggleFilters" aria-expanded="false" aria-controls="filters">Filtreler</button>
+      <!-- Filtreler daraltılmışken de görünsün diye filtre alanlarının dışında -->
+      <button type="button" class="reset" id="reset">Filtreleri temizle</button>
     </div>
     <div class="filters" id="filters" data-collapsed="true">
       <div class="field"><label for="fMarka">Marka</label><select id="fMarka"></select></div>
@@ -289,7 +294,6 @@ td.c-hat { min-width: 180px; max-width: 320px; }
       <div class="field"><label for="fGaraj">Garaj (İETT)</label><select id="fGaraj"></select></div>
       <div class="field"><label for="fHat">Hat (ÖHO)</label><input id="fHat" list="hatList" placeholder="ör. 15BK" autocomplete="off"><datalist id="hatList"></datalist></div>
       <div class="field"><label for="fDurum">Durum</label><select id="fDurum"></select></div>
-      <div class="field"><button type="button" class="reset" id="reset">Filtreleri temizle</button></div>
     </div>
   </div>
 </div>

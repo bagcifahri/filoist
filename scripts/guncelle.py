@@ -43,6 +43,7 @@ BASLIKLAR = {
 # 21.11.2026: Emre GitHub engelini kaldırdı. ÖHO artık GitHub'da ayrı bir işte okunur (--yalniz-oho, veri/oho.json'a
 # yazılır); Türkiye'deki sunucu ÖHO sitesine bağlanmaz, listeyi depodan alır (--oho-depodan).
 OHO_SITE = 'https://emreunel159.com.tr/'
+OHO_ALAN = OHO_SITE.split('//')[1].strip('/')  # raporda ve ekranda görünen site adresi
 # ÖHO sitesine kendimizi açıkça tanıtırız: Emre kayıtlarında isteklerin Filoist'ten geldiğini görür
 OHO_TANITIM = 'Mozilla/5.0 (compatible; Filoist/1.0; +https://bagcifahri.github.io/filoist/)'
 OHO_BOLUMLER = ['oho', 'oas']
@@ -377,7 +378,7 @@ def oho_tazele():
     son = uygulama_verisi.tarih_yazi(onceki['tarih']) if onceki.get('tarih') else 'yok'
     istatistik = {}
     baslangic = time.monotonic()
-    print('ÖHO listesi Emre’nin sitesinden okunuyor…')
+    print(f'ÖHO listesi {OHO_ALAN} sitesinden okunuyor…')
     try:
         kayitlar = oho_indir(istatistik)
         if not kayitlar:
@@ -391,7 +392,7 @@ def oho_tazele():
         return 0
     yedek_yaz(OHO_YOL, kayitlar, simdi)
     dk = (time.monotonic() - baslangic) / 60
-    oho_ozeti(f'🚌 ÖHO listesi Emre’nin sitesinden tazelendi: {sayi(len(kayitlar))} araç, {istatistik["sayfa"]} sayfa, '
+    oho_ozeti(f'🚌 ÖHO listesi {OHO_ALAN} sitesinden tazelendi: {sayi(len(kayitlar))} araç, {istatistik["sayfa"]} sayfa, '
               f'{istatistik["istek"]} istek, {dk:.0f} dk.')
     return 0
 
