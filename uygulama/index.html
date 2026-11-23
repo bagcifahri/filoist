@@ -102,7 +102,7 @@ button, input, select { font: inherit; color: inherit; }
 .field select:disabled { opacity: .5; }
 .reset { height: 38px; border: 1px solid var(--line); background: transparent; border-radius: 6px; padding: 0 14px; cursor: pointer; color: var(--muted); font-weight: 600; }
 .reset:hover { color: var(--ink); border-color: var(--muted); }
-.searchrow .reset { height: 44px; border-radius: 8px; background: var(--surface); }
+.panel .reset { justify-self: start; height: 40px; border-radius: 8px; background: var(--surface); }
 
 /* Sonuç özeti */
 .summary { display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: center; padding-block: 18px 12px; }
@@ -281,8 +281,6 @@ td.c-hat { min-width: 180px; max-width: 320px; }
         <button type="button" data-filo="ÖHO" aria-pressed="false">ÖHO</button>
       </div>
       <button type="button" class="toggle-filters" id="toggleFilters" aria-expanded="false" aria-controls="filters">Filtreler</button>
-      <!-- Filtreler daraltılmışken de görünsün diye filtre alanlarının dışında -->
-      <button type="button" class="reset" id="reset">Filtreleri temizle</button>
     </div>
     <div class="filters" id="filters" data-collapsed="true">
       <div class="field"><label for="fMarka">Marka</label><select id="fMarka"></select></div>
@@ -295,6 +293,9 @@ td.c-hat { min-width: 180px; max-width: 320px; }
       <div class="field"><label for="fHat">Hat (ÖHO)</label><input id="fHat" list="hatList" placeholder="ör. 15BK" autocomplete="off"><datalist id="hatList"></datalist></div>
       <div class="field"><label for="fDurum">Durum</label><select id="fDurum"></select></div>
     </div>
+    <!-- Filtre alanlarının dışında: filtreler daraltılmışken de görünür. Filtrelerden sonra, sonuç sayısı başlığından
+         hemen önce durur; filtre seçtikten sonra geri dönmeden ulaşılır -->
+    <button type="button" class="reset" id="reset">Filtreleri temizle</button>
   </div>
 </div>
 
