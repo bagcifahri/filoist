@@ -183,7 +183,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.yayin.outputs.page_url }}
+      url: ${{ steps.yayin.outputs.page_url || steps.yayin2.outputs.page_url }}
     steps:
       # Taramanın az önce kaydettiği veri de gelsin diye tetikleyen commit değil, main'in son hali alınır
       - uses: actions/checkout@v5
@@ -207,8 +207,20 @@ jobs:
           path: iphone/site
           include-hidden-files: true
 
+      # GitHub bazen az önce yüklenen site paketini hemen göremiyor (24.11.2026: "No artifacts named github-pages").
+      # Böyle geçici bir aksaklıkta yayın kaybolmasın diye kısa bir beklemeden sonra bir kez daha denenir
       - name: Yayınla
         id: yayin
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+
+      - name: Yeniden denemeden önce bekle
+        if: steps.yayin.outcome == 'failure'
+        run: sleep 45
+
+      - name: Yayınla (ikinci deneme)
+        id: yayin2
+        if: steps.yayin.outcome == 'failure'
         uses: actions/deploy-pages@v4
 
   bildir:
