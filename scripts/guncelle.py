@@ -42,6 +42,8 @@ BASLIKLAR = {
 # Site araçları bölümlere ayırıyor; bizim ÖHO filomuz sitedeki "ÖHO" + "OAŞ" bölümleridir (İETT bölümü okunmaz).
 # 21.11.2026: Emre GitHub engelini kaldırdı. ÖHO artık GitHub'da ayrı bir işte okunur (--yalniz-oho, veri/oho.json'a
 # yazılır); Türkiye'deki sunucu ÖHO sitesine bağlanmaz, listeyi depodan alır (--oho-depodan).
+# 25.11.2026: site yenilendi; güvenlik anahtarı ve arka plandaki sayfa isteği kalktı, sayfalar sitenin kendi düz
+# bağlantılarıyla açılıyor (?kod=all&kapikod_search=&seg=oho&page=2). Okuyucu iki biçimi de tanır.
 OHO_SITE = 'https://emreunel159.com.tr/'
 OHO_ALAN = OHO_SITE.split('//')[1].strip('/')  # raporda ve ekranda görünen site adresi
 # ÖHO sitesine kendimizi açıkça tanıtırız: Emre kayıtlarında isteklerin Filoist'ten geldiğini görür
@@ -120,8 +122,9 @@ def oho_bekle():
 
 
 class OhoOturumu:
-    """Sitenin kendi sayfa geçişi gibi okur: ana sayfadan oturum çerezi ve güvenlik anahtarı alınır,
-    sayfalar aynı oturumla, sitenin JavaScript'inin gönderdiği başlıklarla istenir.
+    """Sitenin kendi sayfa geçişi gibi okur: ana sayfadan oturum çerezi (ve site kullanıyorsa güvenlik anahtarı)
+    alınır, sayfalar aynı oturumla istenir. Anahtar varsa sitenin JavaScript'inin gönderdiği başlıklar eklenir,
+    yoksa sayfa sitedeki bağlantıya tıklanmış gibi düz istenir (25.11.2026'dan beri sitenin kendi yöntemi).
 
     Siteyi korumak için: istekler tek tek gider, sayılır (OHO_ISTEK_TAVANI), hatalar sayılır (OHO_HATA_SINIRI),
     ikinci hız sınırı (429) ya da uzun bekleme isteğinde tarama hemen bırakılır."""
@@ -133,7 +136,6 @@ class OhoOturumu:
         self.istek = 0
         self.hata = 0
         self.sinir = 0
-        self.yenile()
 
     def _al(self, adres, basliklar=None, deneme_sayisi=3):
         gecis = {OHO_ANAHTAR_BASLIGI: self.gecis} if self.gecis else {}
@@ -178,14 +180,17 @@ class OhoOturumu:
     def yenile(self):
         ana = self._al(OHO_SITE)
         m = re.search(r'csrfToken:\s*"([^"]+)"', ana)
-        if not m:
-            raise RuntimeError('ÖHO sitesinde güvenlik anahtarı bulunamadı (site yapısı değişmiş olabilir)')
-        self.anahtar = m.group(1)
+        # Anahtar yoksa site onu artık kullanmıyordur (25.11.2026); sayfaların gerçekten okunup okunmadığını
+        # oho_indir'in denetimleri (bölüm sayısı, sayfa başına yeni araç, toplam araç) yakalar
+        self.anahtar = m.group(1) if m else ''
 
     def sayfa(self, bolum, no):
         adres = OHO_SITE + '?' + urllib.parse.urlencode(
             {'kod': 'all', 'kapikod_search': '', 'seg': bolum, 'perPage': 9, 'page': no})
-        basliklar = lambda: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-Token': self.anahtar, 'Referer': OHO_SITE}
+        def basliklar():
+            if not self.anahtar:
+                return {'Referer': OHO_SITE}
+            return {'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-Token': self.anahtar, 'Referer': OHO_SITE}
         try:
             return self._al(adres, basliklar())
         except HizSiniri:
@@ -204,6 +209,8 @@ def oho_indir(istatistik=None):
     araclar = {}
     sayfalar = planlanan = 0
     try:
+        # Oturum açılışı da try içinde: ilk istekte durulsa bile rapordaki istek sayısı doğru çıksın
+        oturum.yenile()
         for bolum in OHO_BOLUMLER:
             oho_bekle()
             ilk = oturum.sayfa(bolum, 1)
