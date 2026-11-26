@@ -3,7 +3,7 @@
 # - Her gece 01:00'de (İstanbul) kaynaklar taranır; değişiklik varsa veri kaydedilir ve site yeniden yayınlanır.
 #   Son 6 saatte başarılı bir tarama yapıldıysa (ör. elle) o geceki tarama atlanır (kontrol işi).
 # - Tarama iki parçadır:
-#   1. oho: ÖHO sitesi (emreunel159.com.tr) GitHub'ın kendi sunucusunda okunur ve veri/oho.json depoya kaydedilir.
+#   1. oho: ÖHO sitesi (emreunel159.com) GitHub'ın kendi sunucusunda okunur ve veri/oho.json depoya kaydedilir.
 #      Site sahibi Emre GitHub engelini kaldırdı (21.11.2026) ve sayfalar arasında 1-2 sn ara istedi; sayfa başına
 #      sunucusunda ~15 veritabanı sorgusu çalışıyor. Site yalnız bu işte, gecede bir kez okunur.
 #   2. tara: Türkiye'deki Filoist sunucusunda (Windows, GitHub "self-hosted runner", etiketi: filoist) İBB ve

@@ -36,15 +36,17 @@ BASLIKLAR = {
     # busphoto.eu sütun adlarını dile göre çeviriyor; birleştirme İngilizce adlara göre yazıldı
     'Accept-Language': 'en-US,en;q=0.9',
 }
-# ÖHO sitesi (emreunel159.com.tr), 16.11.2026'dan beri sayfaları yalnızca kendi sayfa geçişiyle veriyor:
+# ÖHO sitesi (emreunel159.com, 26.11.2026'ya kadar emreunel159.com.tr), 16.11.2026'dan beri sayfaları yalnızca kendi sayfa geçişiyle veriyor:
 # oturum çerezi + sayfadaki güvenlik anahtarı + "X-Requested-With" başlığı. Site sahibi Emre, Filoist'in siteyi bu yolla
 # okumasına izin verdi (kullanıcı 16.11.2026'da ÖHO forumlarında görüştü). Sayfa başına en çok 9 araç verilir.
 # Site araçları bölümlere ayırıyor; bizim ÖHO filomuz sitedeki "ÖHO" + "OAŞ" bölümleridir (İETT bölümü okunmaz).
 # 21.11.2026: Emre GitHub engelini kaldırdı. ÖHO artık GitHub'da ayrı bir işte okunur (--yalniz-oho, veri/oho.json'a
 # yazılır); Türkiye'deki sunucu ÖHO sitesine bağlanmaz, listeyi depodan alır (--oho-depodan).
 # 25.11.2026: site yenilendi; güvenlik anahtarı ve arka plandaki sayfa isteği kalktı, sayfalar sitenin kendi düz
-# bağlantılarıyla açılıyor (?kod=all&kapikod_search=&seg=oho&page=2). Okuyucu iki biçimi de tanır.
-OHO_SITE = 'https://emreunel159.com.tr/'
+# bağlantılarıyla açılıyor (?kod=all&kapikod_search=&seg=oho&page=2).
+# 26.11.2026: Emre sitenin adresini emreunel159.com olarak değiştirdi ve güvenlik anahtarını tamamen kaldırdığını bildirdi;
+# okuyucu sayfaları yalnız sitenin düz bağlantılarıyla ister.
+OHO_SITE = 'https://emreunel159.com/'
 OHO_ALAN = OHO_SITE.split('//')[1].strip('/')  # raporda ve ekranda görünen site adresi
 # ÖHO sitesine kendimizi açıkça tanıtırız: Emre kayıtlarında isteklerin Filoist'ten geldiğini görür
 OHO_TANITIM = 'Mozilla/5.0 (compatible; Filoist/1.0; +https://bagcifahri.github.io/filoist/)'
@@ -122,16 +124,14 @@ def oho_bekle():
 
 
 class OhoOturumu:
-    """Sitenin kendi sayfa geçişi gibi okur: ana sayfadan oturum çerezi (ve site kullanıyorsa güvenlik anahtarı)
-    alınır, sayfalar aynı oturumla istenir. Anahtar varsa sitenin JavaScript'inin gönderdiği başlıklar eklenir,
-    yoksa sayfa sitedeki bağlantıya tıklanmış gibi düz istenir (25.11.2026'dan beri sitenin kendi yöntemi).
+    """Sitedeki bir ziyaretçi gibi okur: ana sayfadan oturum çerezi alınır, sayfalar aynı oturumla, sitedeki
+    sayfa bağlantısına tıklanmış gibi istenir.
 
     Siteyi korumak için: istekler tek tek gider, sayılır (OHO_ISTEK_TAVANI), hatalar sayılır (OHO_HATA_SINIRI),
     ikinci hız sınırı (429) ya da uzun bekleme isteğinde tarama hemen bırakılır."""
 
     def __init__(self):
         self.acici = urllib.request.build_opener(urllib.request.HTTPCookieProcessor())
-        self.anahtar = ''
         self.gecis = oho_anahtari()
         self.istek = 0
         self.hata = 0
@@ -178,21 +178,16 @@ class OhoOturumu:
                 time.sleep(15 * deneme)  # sunucu zorlanıyorsa giderek daha uzun beklenir
 
     def yenile(self):
-        ana = self._al(OHO_SITE)
-        m = re.search(r'csrfToken:\s*"([^"]+)"', ana)
-        # Anahtar yoksa site onu artık kullanmıyordur (25.11.2026); sayfaların gerçekten okunup okunmadığını
-        # oho_indir'in denetimleri (bölüm sayısı, sayfa başına yeni araç, toplam araç) yakalar
-        self.anahtar = m.group(1) if m else ''
+        # Oturum çerezi için ana sayfa açılır. Sayfaların gerçekten okunup okunmadığını oho_indir'in denetimleri
+        # (bölüm sayısı, sayfa başına yeni araç, toplam araç) yakalar
+        self._al(OHO_SITE)
 
     def sayfa(self, bolum, no):
         adres = OHO_SITE + '?' + urllib.parse.urlencode(
             {'kod': 'all', 'kapikod_search': '', 'seg': bolum, 'perPage': 9, 'page': no})
-        def basliklar():
-            if not self.anahtar:
-                return {'Referer': OHO_SITE}
-            return {'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-Token': self.anahtar, 'Referer': OHO_SITE}
+        basliklar = {'Referer': OHO_SITE}
         try:
-            return self._al(adres, basliklar())
+            return self._al(adres, basliklar)
         except HizSiniri:
             raise
         except RuntimeError:
@@ -200,7 +195,7 @@ class OhoOturumu:
             oho_bekle()
             self.yenile()
             oho_bekle()
-            return self._al(adres, basliklar())
+            return self._al(adres, basliklar)
 
 
 def oho_indir(istatistik=None):
